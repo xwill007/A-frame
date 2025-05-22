@@ -20,6 +20,25 @@
         <a-circle position="0 0 0" rotation="-90 0 0" radius="20" segments="64"
                   material="src: pasto.jpg; repeat: 2 3"></a-circle>
 
+        <!-- Árboles alrededor del escenario -->
+        <a-entity id="trees">
+            <!-- Árbol 1 -->
+            <a-entity position="-5 0.5 -5">
+                <a-cylinder height="2" radius="0.2" color="#8B4513"></a-cylinder>
+                <a-cone height="3" radius-bottom="1" color="#228B22" position="0 1.5 0"></a-cone>
+            </a-entity>
+            <!-- Árbol 2 -->
+            <a-entity position="5 0.5 -5">
+                <a-cylinder height="2" radius="0.2" color="#8B4513"></a-cylinder>
+                <a-cone height="3" radius-bottom="1" color="#228B22" position="0 1.5 0"></a-cone>
+            </a-entity>
+            <!-- Árbol 3 -->
+            <a-entity position="0 0.5 -10">
+                <a-cylinder height="2" radius="0.2" color="#8B4513"></a-cylinder>
+                <a-cone height="3" radius-bottom="1" color="#228B22" position="0 1.5 0"></a-cone>
+            </a-entity>
+        </a-entity>
+
         <!-- Un cubo -->
         <a-box id="colorBox"
             position="-2 0.5 1.5" 
