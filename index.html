@@ -41,21 +41,24 @@
 
         <!-- Un cubo -->
         <a-box id="colorBox"
-            position="-2 0.5 1.5" 
+            position="-3.5 1.0 2.0" 
             rotation="0 0 0" 
+            scale="1 1 1"
             color="rgba(255,0,13,0.8)"
-        ></a-box>
-
+        >
+        
         <!-- Modelo 3D: casco Helmet -->
         <a-entity
-            position="-2 1.5 1.6"
+            position="-0 1.0 0"
             scale="0.6 0.6 0.6"
             gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/DamagedHelmet/glTF-Binary/DamagedHelmet.glb">
         </a-entity>
     
+    </a-box>
+    
         <!-- Modelo 3D animado: Fox -->
         <a-entity
-            position="0 0 0"
+            position="4 0 1"
             scale="0.01 0.01 0.01"
             animation-mixer
             gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Fox/glTF-Binary/Fox.glb">
@@ -70,6 +73,9 @@
         
         <!-- Cámara -->
         <a-entity camera look-controls wasd-controls position="0 1.6 5"></a-entity>
+
+        <!-- Imagen -->
+        <a-image src="image.png" position="0.0 1.5 3.0" width="2" height="2"></a-image>
     </a-scene>
 
     <!-- Script para enlazar selector de color con el cubo -->
