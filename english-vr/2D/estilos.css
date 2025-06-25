@@ -3,12 +3,10 @@ body {
     margin: 0;
     padding: 0;
     font-family: Arial, sans-serif;
-    background: linear-gradient(120deg, #8ec5fc, #e0c3fc); /* Fondo bonito */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-  }
+    background: linear-gradient(120deg, #8ec5fc, #e0c3fc);
+    min-height: 100vh;
+    margin-left: 100px; /* Agrega este margen izquierdo */
+}
   
   /* Estilo del contenedor de la pantalla de inicio */
   .inicio {
@@ -83,3 +81,17 @@ body {
     color: #777;
   }
   
+  .cabecera h1 {
+    text-align: center;
+  }
+  
+  .volver {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    background: none;
+    color: #1a237e;
+    font-size: 1.1em;
+    text-decoration: underline;
+    z-index: 100;
+}
