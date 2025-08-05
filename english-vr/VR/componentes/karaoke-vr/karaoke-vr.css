@@ -1,0 +1,36 @@
+/* Estilos para el karaoke VR */
+
+/* Controles de música */
+.music-control {
+    cursor: pointer;
+    border: 2px solid rgba(255,255,255,0.3);
+}
+
+.music-control:hover {
+    border: 2px solid rgba(255,255,255,0.8);
+}
+
+/* Efectos de texto */
+.lyric-text {
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    font-weight: bold;
+}
+
+/* Animaciones personalizadas */
+.glow-effect {
+    animation: glow 2s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+    from {
+        text-shadow: 0 0 5px #ffffff, 0 0 10px #ffffff, 0 0 15px #ffffff;
+    }
+    to {
+        text-shadow: 0 0 10px #ffffff, 0 0 20px #ffffff, 0 0 30px #ffffff;
+    }
+}
+
+/* Indicadores de interacción */
+.interactive-element {
+    transition: all 0.3s ease;
+}

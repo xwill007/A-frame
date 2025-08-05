@@ -1,0 +1,229 @@
+<!-- Lista de canciones en VR -->
+<a-scene background="color: #001122" vr-mode-ui="enabled: true">
+    <!-- Ambiente espacial -->
+    <a-sky color="#001133"></a-sky>
+    
+    <!-- Plataforma principal -->
+    <a-cylinder position="0 0 0" 
+                rotation="0 0 0" 
+                radius="8" 
+                height="0.3" 
+                color="#223366"
+                material="metalness: 0.6; roughness: 0.3">
+    </a-cylinder>
+    
+    <!-- Título principal flotante -->
+    <a-text value="SELECCIONA UNA CANCIÓN" 
+            position="0 4 -3" 
+            align="center" 
+            color="#ffffff"
+            scale="2 2 2"
+            animation="property: rotation; to: 0 5 0; dur: 20000; loop: true">
+    </a-text>
+    
+    <!-- Panel de canciones en círculo -->
+    <a-entity id="songs-container" position="0 1.5 0">
+        
+        <!-- Canción 1: Imagine -->
+        <a-entity id="song-1" position="-3 0 -3" rotation="0 45 0">
+            <a-box width="2" height="2.5" depth="0.2" 
+                   color="#4a90e2" 
+                   class="clickable song-card"
+                   animation="property: scale; startEvents: mouseenter; to: 1.1 1.1 1.1; dur: 200"
+                   animation__reset="property: scale; startEvents: mouseleave; to: 1 1 1; dur: 200">
+                
+                <!-- Título -->
+                <a-text value="IMAGINE" 
+                        position="0 0.8 0.11" 
+                        align="center" 
+                        color="#ffffff"
+                        scale="1.2 1.2 1.2">
+                </a-text>
+                
+                <!-- Artista -->
+                <a-text value="John Lennon" 
+                        position="0 0.4 0.11" 
+                        align="center" 
+                        color="#cccccc"
+                        scale="0.8 0.8 0.8">
+                </a-text>
+                
+                <!-- Descripción -->
+                <a-text value="Canción tranquila con\nvocabulario sencillo\ny reflexivo" 
+                        position="0 -0.2 0.11" 
+                        align="center" 
+                        color="#aaaaaa"
+                        scale="0.6 0.6 0.6">
+                </a-text>
+                
+                <!-- Botón -->
+                <a-circle position="0 -0.8 0.11" 
+                          radius="0.4" 
+                          color="#00ff00"
+                          class="clickable practice-btn">
+                    <a-text value="PRACTICAR" 
+                            position="0 0 0.01" 
+                            align="center" 
+                            color="#000000"
+                            scale="0.7 0.7 0.7">
+                    </a-text>
+                </a-circle>
+            </a-box>
+        </a-entity>
+        
+        <!-- Canción 2: Let it be -->
+        <a-entity id="song-2" position="3 0 -3" rotation="0 -45 0">
+            <a-box width="2" height="2.5" depth="0.2" 
+                   color="#e74c3c" 
+                   class="clickable song-card"
+                   animation="property: scale; startEvents: mouseenter; to: 1.1 1.1 1.1; dur: 200"
+                   animation__reset="property: scale; startEvents: mouseleave; to: 1 1 1; dur: 200">
+                
+                <!-- Título -->
+                <a-text value="LET IT BE" 
+                        position="0 0.8 0.11" 
+                        align="center" 
+                        color="#ffffff"
+                        scale="1.2 1.2 1.2">
+                </a-text>
+                
+                <!-- Artista -->
+                <a-text value="The Beatles" 
+                        position="0 0.4 0.11" 
+                        align="center" 
+                        color="#cccccc"
+                        scale="0.8 0.8 0.8">
+                </a-text>
+                
+                <!-- Descripción -->
+                <a-text value="Ideal para principiantes\nFrases repetitivas\ny claras" 
+                        position="0 -0.2 0.11" 
+                        align="center" 
+                        color="#aaaaaa"
+                        scale="0.6 0.6 0.6">
+                </a-text>
+                
+                <!-- Botón -->
+                <a-circle position="0 -0.8 0.11" 
+                          radius="0.4" 
+                          color="#00ff00"
+                          class="clickable practice-btn">
+                    <a-text value="PRACTICAR" 
+                            position="0 0 0.01" 
+                            align="center" 
+                            color="#000000"
+                            scale="0.7 0.7 0.7">
+                    </a-text>
+                </a-circle>
+            </a-box>
+        </a-entity>
+        
+        <!-- Canción 3: Perfect -->
+        <a-entity id="song-3" position="0 0 -5">
+            <a-box width="2" height="2.5" depth="0.2" 
+                   color="#9b59b6" 
+                   class="clickable song-card"
+                   animation="property: scale; startEvents: mouseenter; to: 1.1 1.1 1.1; dur: 200"
+                   animation__reset="property: scale; startEvents: mouseleave; to: 1 1 1; dur: 200">
+                
+                <!-- Título -->
+                <a-text value="PERFECT" 
+                        position="0 0.8 0.11" 
+                        align="center" 
+                        color="#ffffff"
+                        scale="1.2 1.2 1.2">
+                </a-text>
+                
+                <!-- Artista -->
+                <a-text value="Ed Sheeran" 
+                        position="0 0.4 0.11" 
+                        align="center" 
+                        color="#cccccc"
+                        scale="0.8 0.8 0.8">
+                </a-text>
+                
+                <!-- Descripción -->
+                <a-text value="Canción moderna para\npracticar tiempos verbales\ny vocabulario amoroso" 
+                        position="0 -0.2 0.11" 
+                        align="center" 
+                        color="#aaaaaa"
+                        scale="0.6 0.6 0.6">
+                </a-text>
+                
+                <!-- Botón -->
+                <a-circle position="0 -0.8 0.11" 
+                          radius="0.4" 
+                          color="#00ff00"
+                          class="clickable practice-btn">
+                    <a-text value="PRACTICAR" 
+                            position="0 0 0.01" 
+                            align="center" 
+                            color="#000000"
+                            scale="0.7 0.7 0.7">
+                    </a-text>
+                </a-circle>
+            </a-box>
+        </a-entity>
+    </a-entity>
+    
+    <!-- Botón de volver flotante -->
+    <a-entity id="back-button" position="0 3 -1">
+        <a-circle radius="0.5" 
+                  color="#ff6600"
+                  class="clickable navigation-btn"
+                  animation="property: scale; startEvents: mouseenter; to: 1.2 1.2 1.2; dur: 200"
+                  animation__reset="property: scale; startEvents: mouseleave; to: 1 1 1; dur: 200">
+            <a-text value="← INICIO VR" 
+                    position="0 0 0.01" 
+                    align="center" 
+                    color="#ffffff"
+                    scale="0.8 0.8 0.8">
+            </a-text>
+        </a-circle>
+    </a-entity>
+    
+    <!-- Partículas flotantes decorativas -->
+    <a-entity id="particles">
+        <a-sphere position="2 3 -2" radius="0.05" color="#ffffff" opacity="0.7"
+                  animation="property: position; to: -2 4 -3; dur: 8000; loop: true; dir: alternate">
+        </a-sphere>
+        <a-sphere position="-2 3.5 -1" radius="0.03" color="#ffff00" opacity="0.5"
+                  animation="property: position; to: 2 2.5 -4; dur: 6000; loop: true; dir: alternate">
+        </a-sphere>
+        <a-sphere position="1 2.8 -4" radius="0.04" color="#00ffff" opacity="0.6"
+                  animation="property: position; to: -1 4.2 -1; dur: 7000; loop: true; dir: alternate">
+        </a-sphere>
+    </a-entity>
+    
+    <!-- Iluminación -->
+    <a-entity light="type: ambient; color: #404040; intensity: 0.6"></a-entity>
+    <a-entity light="type: point; position: 0 5 0; color: #ffffff; intensity: 1.5"></a-entity>
+    <a-entity light="type: point; position: -4 3 -2; color: #4a90e2; intensity: 0.8"></a-entity>
+    <a-entity light="type: point; position: 4 3 -2; color: #e74c3c; intensity: 0.8"></a-entity>
+    
+    <!-- Cámara con controles VR -->
+    <a-entity id="rig" position="0 1.6 4">
+        <a-entity camera 
+                  look-controls="pointerLockEnabled: true" 
+                  wasd-controls="acceleration: 15">
+        </a-entity>
+        
+        <!-- Controladores VR -->
+        <a-entity hand-controls="hand: left; handModelStyle: lowPoly"
+                  laser-controls="hand: left"
+                  raycaster="objects: .clickable">
+        </a-entity>
+        
+        <a-entity hand-controls="hand: right; handModelStyle: lowPoly"
+                  laser-controls="hand: right"
+                  raycaster="objects: .clickable">
+        </a-entity>
+    </a-entity>
+
+    <!-- Cursor para navegación sin VR -->
+    <a-entity cursor="rayOrigin: mouse" 
+              raycaster="objects: .clickable">
+    </a-entity>
+</a-scene>
+
+<script src="canciones-vr.js"></script>

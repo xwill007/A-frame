@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mi Primera Escena VR</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="componentes/formulario-registro-component.js"></script>
 </head>
 <body>
     <!-- Selector de color para el cubo -->
@@ -71,28 +72,249 @@
         <a-entity light="type: directional; position: 0 1 1; intensity: 0.8"></a-entity>
         <a-entity light="type: point; position: 2 2 2; intensity: 0.5"></a-entity>
         
-        <!-- Cámara -->
-        <a-entity camera look-controls wasd-controls position="0 1.6 5"></a-entity>
+        <!-- Cámara con cursor -->
+        <a-entity camera look-controls wasd-controls position="0 1.6 5">
+            <a-cursor 
+                position="0 0 -1"
+                geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
+                material="color: white; shader: flat"
+                animation__click="property: scale; startEvents: click; from: 0.1 0.1 0.1; to: 1 1 1; dur: 150"
+                animation__fuse="property: scale; startEvents: fusing; from: 1 1 1; to: 0.1 0.1 0.1; dur: 1500"
+                raycaster="objects: .clickable"
+            ></a-cursor>
+        </a-entity>
 
-        <!-- Imagen -->
-        <a-image src="imagenes/inicio.png" position="0.0 1.5 3.0" width="2" height="2"></a-image>
+        <!-- Componente VR de formulario de registro (centro) -->
+        <a-entity 
+            id="registro-vr-component" 
+            formulario-registro-vr="position: 0 1.5 3; visible: false"
+            position="0.0 1.5 3.0">
+        </a-entity>
 
-        <!-- Imagen karaoke -->
-        <a-image src="imagenes/karaoke.png" position="-4 1.5 3" width="2" height="2"></a-image>
+        <!-- Botón para mostrar formulario -->
+        <a-entity id="form-trigger-button" position="0.0 1.5 3.0">
+            <!-- Fondo del botón -->
+            <a-plane 
+                width="2.2" 
+                height="2.2" 
+                color="#1e3c72" 
+                opacity="0.9"
+                class="clickable"
+                cursor-raycast
+                cursor-listener
+            ></a-plane>
+            
+            <!-- Borde brillante -->
+            <a-ring 
+                radius-inner="1.05" 
+                radius-outer="1.15" 
+                color="#00ffff" 
+                opacity="0.8"
+                position="0 0 0.01"
+                animation="property: rotation; to: 0 0 360; dur: 8000; loop: true"
+            ></a-ring>
+            
+            <!-- Ícono de usuario -->
+            <a-cylinder 
+                height="0.4" 
+                radius="0.3" 
+                color="#ffffff" 
+                position="0 0.4 0.02"
+            ></a-cylinder>
+            <a-sphere 
+                radius="0.2" 
+                color="#ffffff" 
+                position="0 0.1 0.02"
+            ></a-sphere>
+            
+            <!-- Texto del botón -->
+            <a-text 
+                value="REGISTRO VR" 
+                position="0 -0.4 0.02" 
+                align="center" 
+                color="#00ffff" 
+                scale="0.6 0.6 1"
+                animation="property: scale; to: 0.7 0.7 1; dur: 2000; dir: alternate; loop: true"
+            ></a-text>
+            
+            <!-- Subtítulo -->
+            <a-text 
+                value="Crea tu cuenta" 
+                position="0 -0.7 0.02" 
+                align="center" 
+                color="#ffffff" 
+                scale="0.4 0.4 1"
+            ></a-text>
+            
+            <!-- Efectos de partículas alrededor -->
+            <a-sphere 
+                radius="0.02" 
+                color="#00ffff" 
+                position="0.8 0.8 0.1"
+                animation="property: position; to: -0.8 -0.8 0.1; dur: 4000; loop: true; dir: alternate"
+            ></a-sphere>
+            <a-sphere 
+                radius="0.015" 
+                color="#ffffff" 
+                position="-0.8 0.6 0.1"
+                animation="property: position; to: 0.8 -0.6 0.1; dur: 3000; loop: true; dir: alternate"
+            ></a-sphere>
+        </a-entity>
 
-        <!-- Imagen lista -->
-        <a-image src="imagenes/lista.png" position="4 1.5 3" width="2" height="2"></a-image>
+        <!-- Imagen karaoke (navegación al karaoke VR) -->
+        <a-image 
+            src="imagenes/karaoke.png" 
+            position="-4 1.5 3" 
+            width="2" 
+            height="2"
+            class="clickable"
+            cursor-raycast
+            cursor-listener
+        ></a-image>
 
-    
+        <!-- Imagen lista (navegación a lista de canciones VR) -->
+        <a-image 
+            src="imagenes/lista.png" 
+            position="4 1.5 3" 
+            width="2" 
+            height="2"
+            class="clickable"
+            cursor-raycast
+            cursor-listener
+        ></a-image>
+
     </a-scene>
 
     <!-- Script para enlazar selector de color con el cubo -->
     <script>
-      const picker = document.getElementById('colorPicker');
-      const box = document.getElementById('colorBox');
-      picker.addEventListener('input', event => {
-        box.setAttribute('color', event.target.value);
-      });
+        const picker = document.getElementById('colorPicker');
+        const box = document.getElementById('colorBox');
+        picker.addEventListener('input', event => {
+            box.setAttribute('color', event.target.value);
+        });
+
+        // Navegación VR
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelector('a-scene').addEventListener('loaded', function() {
+                console.log('Escena VR cargada - Controles disponibles');
+                
+                // Navegación con componentes e imágenes
+                const registroComponent = document.getElementById('registro-vr-component');
+                const formTriggerButton = document.getElementById('form-trigger-button');
+                const karaokeImg = document.querySelector('a-image[src="imagenes/karaoke.png"]');
+                const listaImg = document.querySelector('a-image[src="imagenes/lista.png"]');
+                
+                // Navegación al formulario de registro VR (mostrar formulario inline)
+                if (formTriggerButton) {
+                    formTriggerButton.addEventListener('click', function() {
+                        console.log('Mostrando formulario de registro VR');
+                        
+                        // Efecto visual de selección
+                        const plane = this.querySelector('a-plane');
+                        if (plane) {
+                            plane.setAttribute('animation__click', 
+                                'property: scale; to: 1.1 1.1 1.1; dur: 300; dir: alternate; loop: 2');
+                        }
+                        
+                        // Ocultar botón y mostrar formulario
+                        setTimeout(() => {
+                            this.setAttribute('visible', false);
+                            
+                            // Mostrar formulario
+                            if (registroComponent) {
+                                const formComponent = registroComponent.components['formulario-registro-vr'];
+                                if (formComponent) {
+                                    formComponent.showForm();
+                                }
+                            }
+                        }, 600);
+                    });
+                    
+                    // Efectos de hover
+                    formTriggerButton.addEventListener('mouseenter', function() {
+                        const plane = this.querySelector('a-plane');
+                        if (plane) {
+                            plane.setAttribute('animation__hover', 
+                                'property: scale; to: 1.05 1.05 1.05; dur: 200');
+                        }
+                    });
+                    
+                    formTriggerButton.addEventListener('mouseleave', function() {
+                        const plane = this.querySelector('a-plane');
+                        if (plane) {
+                            plane.setAttribute('animation__hover', 
+                                'property: scale; to: 1 1 1; dur: 200');
+                        }
+                    });
+                }
+                
+                // Listener para cuando se cierre el formulario
+                if (registroComponent) {
+                    registroComponent.addEventListener('form-closed', function() {
+                        // Mostrar botón de nuevo
+                        if (formTriggerButton) {
+                            formTriggerButton.setAttribute('visible', true);
+                            formTriggerButton.setAttribute('animation__show', 
+                                'property: scale; from: 0 0 0; to: 1 1 1; dur: 500');
+                        }
+                    });
+                }
+                
+                // Navegación al karaoke VR
+                if (karaokeImg) {
+                    karaokeImg.addEventListener('click', function() {
+                        console.log('Navegando al karaoke VR');
+                        window.location.href = 'views/karaoke-vr.html';
+                    });
+                }
+                
+                // Navegación a lista de canciones VR
+                if (listaImg) {
+                    listaImg.addEventListener('click', function() {
+                        console.log('Navegando a lista de canciones VR');
+                        window.location.href = 'views/canciones-vr.html';
+                    });
+                }
+                
+                // Controles de teclado
+                document.addEventListener('keydown', function(e) {
+                    switch(e.key) {
+                        case '1':
+                            if (formTriggerButton && formTriggerButton.getAttribute('visible') !== 'false') {
+                                formTriggerButton.click();
+                            }
+                            break;
+                        case '2':
+                            if (karaokeImg) karaokeImg.click();
+                            break;
+                        case '3':
+                            if (listaImg) listaImg.click();
+                            break;
+                        case 'Escape':
+                            // Cerrar formulario si está abierto
+                            if (registroComponent) {
+                                const formComponent = registroComponent.components['formulario-registro-vr'];
+                                if (formComponent) {
+                                    formComponent.hideForm();
+                                    setTimeout(() => {
+                                        if (formTriggerButton) {
+                                            formTriggerButton.setAttribute('visible', true);
+                                        }
+                                    }, 500);
+                                }
+                            }
+                            break;
+                    }
+                });
+                
+                console.log('Controles VR:');
+                console.log('- 1: Mostrar formulario de registro VR');
+                console.log('- 2: Ir al karaoke VR');
+                console.log('- 3: Ir a lista de canciones VR');
+                console.log('- ESC: Cerrar formulario');
+                console.log('- Click/VR: Interactuar con elementos');
+            });
+        });
     </script>
 </body>
 </html>

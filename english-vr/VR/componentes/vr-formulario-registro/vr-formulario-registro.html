@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulario de Registro VR</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <link rel="stylesheet" href="vr-formulario-registro.css">
+</head>
+<body>
+    <a-scene background="color: #1a1a2e" vr-mode-ui="enabled: true">
+        <!-- Cielo estrellado -->
+        <a-sky color="#0f0f23"></a-sky>
+        
+        <!-- Iluminación -->
+        <a-entity light="type: ambient; color: #404040; intensity: 0.4"></a-entity>
+        <a-entity light="type: directional; position: 2 4 5; intensity: 0.8"></a-entity>
+        <a-entity light="type: point; position: 0 3 0; color: #00ffff; intensity: 0.5"></a-entity>
+
+        <!-- Panel principal del formulario -->
+        <a-entity id="form-container" position="0 1.8 -3">
+            <!-- Fondo del panel -->
+            <a-plane 
+                width="6" 
+                height="8" 
+                color="#1e3c72" 
+                opacity="0.9"
+                material="shader: flat"
+                geometry="primitive: plane"
+            ></a-plane>
+
+            <!-- Borde brillante -->
+            <a-ring 
+                radius-inner="2.9" 
+                radius-outer="3.1" 
+                color="#00ffff" 
+                opacity="0.6"
+                position="0 0 0.01"
+                animation="property: rotation; to: 0 0 360; dur: 10000; loop: true"
+            ></a-ring>
+
+            <!-- Título -->
+            <a-text 
+                value="REGISTRO VR" 
+                position="0 3.5 0.1" 
+                align="center" 
+                color="#ffffff" 
+                font="roboto"
+                geometry="primitive: plane; width: auto; height: auto"
+                material="color: #00ffff; shader: msdf"
+                scale="1.5 1.5 1"
+                animation="property: scale; to: 1.6 1.6 1; dir: alternate; dur: 2000; loop: true"
+            ></a-text>
+
+            <!-- Campo Nombre -->
+            <a-entity id="name-field" position="0 2.5 0.1">
+                <a-text 
+                    value="NOMBRE:" 
+                    position="-2.5 0.3 0" 
+                    color="#ffffff" 
+                    scale="0.8 0.8 1"
+                ></a-text>
+                <a-box 
+                    id="name-input"
+                    width="4" 
+                    height="0.4" 
+                    depth="0.1" 
+                    color="#2a2a4a" 
+                    class="input-field clickable"
+                    position="0 0 0"
+                ></a-box>
+                <a-text 
+                    id="name-text"
+                    value="Ingresa tu nombre..." 
+                    position="-1.8 0 0.06" 
+                    color="#888888" 
+                    scale="0.6 0.6 1"
+                ></a-text>
+            </a-entity>
+
+            <!-- Campo Email -->
+            <a-entity id="email-field" position="0 1.5 0.1">
+                <a-text 
+                    value="EMAIL:" 
+                    position="-2.5 0.3 0" 
+                    color="#ffffff" 
+                    scale="0.8 0.8 1"
+                ></a-text>
+                <a-box 
+                    id="email-input"
+                    width="4" 
+                    height="0.4" 
+                    depth="0.1" 
+                    color="#2a2a4a" 
+                    class="input-field clickable"
+                    position="0 0 0"
+                ></a-box>
+                <a-text 
+                    id="email-text"
+                    value="ejemplo@correo.com" 
+                    position="-1.8 0 0.06" 
+                    color="#888888" 
+                    scale="0.6 0.6 1"
+                ></a-text>
+            </a-entity>
+
+            <!-- Campo Contraseña -->
+            <a-entity id="password-field" position="0 0.5 0.1">
+                <a-text 
+                    value="CONTRASEÑA:" 
+                    position="-2.5 0.3 0" 
+                    color="#ffffff" 
+                    scale="0.8 0.8 1"
+                ></a-text>
+                <a-box 
+                    id="password-input"
+                    width="4" 
+                    height="0.4" 
+                    depth="0.1" 
+                    color="#2a2a4a" 
+                    class="input-field clickable"
+                    position="0 0 0"
+                ></a-box>
+                <a-text 
+                    id="password-text"
+                    value="••••••••" 
+                    position="-1.8 0 0.06" 
+                    color="#888888" 
+                    scale="0.6 0.6 1"
+                ></a-text>
+            </a-entity>
+
+            <!-- Selector de Nivel -->
+            <a-entity id="level-field" position="0 -0.5 0.1">
+                <a-text 
+                    value="NIVEL:" 
+                    position="-2.5 0.3 0" 
+                    color="#ffffff" 
+                    scale="0.8 0.8 1"
+                ></a-text>
+                
+                <!-- Botones de nivel -->
+                <a-entity id="level-buttons" position="0 -0.3 0">
+                    <a-box 
+                        id="beginner-btn"
+                        width="1.2" 
+                        height="0.3" 
+                        depth="0.1" 
+                        color="#4CAF50" 
+                        class="level-btn clickable selected"
+                        position="-1.3 0 0"
+                    ></a-box>
+                    <a-text 
+                        value="PRINCIPIANTE" 
+                        position="-1.3 0 0.06" 
+                        align="center"
+                        color="#ffffff" 
+                        scale="0.4 0.4 1"
+                    ></a-text>
+
+                    <a-box 
+                        id="intermediate-btn"
+                        width="1.2" 
+                        height="0.3" 
+                        depth="0.1" 
+                        color="#2196F3" 
+                        class="level-btn clickable"
+                        position="0 0 0"
+                    ></a-box>
+                    <a-text 
+                        value="INTERMEDIO" 
+                        position="0 0 0.06" 
+                        align="center"
+                        color="#ffffff" 
+                        scale="0.4 0.4 1"
+                    ></a-text>
+
+                    <a-box 
+                        id="advanced-btn"
+                        width="1.2" 
+                        height="0.3" 
+                        depth="0.1" 
+                        color="#FF5722" 
+                        class="level-btn clickable"
+                        position="1.3 0 0"
+                    ></a-box>
+                    <a-text 
+                        value="AVANZADO" 
+                        position="1.3 0 0.06" 
+                        align="center"
+                        color="#ffffff" 
+                        scale="0.4 0.4 1"
+                    ></a-text>
+                </a-entity>
+            </a-entity>
+
+            <!-- Botón Registrarse -->
+            <a-entity id="register-button" position="0 -1.8 0.1">
+                <a-box 
+                    id="register-btn"
+                    width="3" 
+                    height="0.6" 
+                    depth="0.15" 
+                    color="#00ffff" 
+                    class="clickable"
+                    animation="property: rotation; to: 0 0 360; dur: 8000; loop: true"
+                ></a-box>
+                <a-text 
+                    value="REGISTRARSE" 
+                    position="0 0 0.08" 
+                    align="center"
+                    color="#000000" 
+                    scale="0.8 0.8 1"
+                    font="roboto"
+                ></a-text>
+            </a-entity>
+
+            <!-- Botón Volver -->
+            <a-entity id="back-button" position="0 -2.8 0.1">
+                <a-box 
+                    id="back-btn"
+                    width="2" 
+                    height="0.4" 
+                    depth="0.1" 
+                    color="#666666" 
+                    class="clickable"
+                ></a-box>
+                <a-text 
+                    value="VOLVER" 
+                    position="0 0 0.06" 
+                    align="center"
+                    color="#ffffff" 
+                    scale="0.6 0.6 1"
+                ></a-text>
+            </a-entity>
+        </a-entity>
+
+        <!-- Efectos de partículas -->
+        <a-entity id="particles">
+            <!-- Partículas flotantes -->
+            <a-sphere 
+                radius="0.02" 
+                color="#00ffff" 
+                position="2 3 -2"
+                animation="property: position; to: -2 1 -4; dur: 8000; loop: true; dir: alternate"
+            ></a-sphere>
+            <a-sphere 
+                radius="0.03" 
+                color="#ffffff" 
+                position="-3 2 -1"
+                animation="property: position; to: 3 4 -3; dur: 6000; loop: true; dir: alternate"
+            ></a-sphere>
+            <a-sphere 
+                radius="0.025" 
+                color="#00ff00" 
+                position="1 4 -3"
+                animation="property: position; to: -1 2 -1; dur: 7000; loop: true; dir: alternate"
+            ></a-sphere>
+        </a-entity>
+
+        <!-- Cámara con cursor -->
+        <a-entity camera look-controls wasd-controls position="0 1.6 2">
+            <a-cursor 
+                position="0 0 -1"
+                geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
+                material="color: #00ffff; shader: flat"
+                animation__click="property: scale; startEvents: click; from: 0.1 0.1 0.1; to: 1 1 1; dur: 150"
+                animation__fuse="property: scale; startEvents: fusing; from: 1 1 1; to: 0.1 0.1 0.1; dur: 1500"
+                raycaster="objects: .clickable"
+            ></a-cursor>
+        </a-entity>
+    </a-scene>
+
+    <script src="vr-formulario-registro.js"></script>
+</body>
+</html>

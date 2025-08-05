@@ -1,0 +1,122 @@
+<!-- Escena VR Principal del Entorno de Aprendizaje -->
+<a-scene background="color: #ECECEC" vr-mode-ui="enabled: true">
+    <!-- Cielo con nubes -->
+    <a-sky src="../imagenes/cielo.jpg" rotation="0 -90 0"></a-sky>
+    
+    <!-- Plano de piso -->
+    <a-circle position="0 0 0" rotation="-90 0 0" radius="20" segments="64"
+              material="src: ../imagenes/pasto.jpg; repeat: 2 3"></a-circle>
+
+    <!-- Árboles alrededor del escenario -->
+    <a-entity id="trees">
+        <!-- Árbol 1 -->
+        <a-entity position="-5 0.5 -5">
+            <a-cylinder height="2" radius="0.2" color="#8B4513"></a-cylinder>
+            <a-cone height="3" radius-bottom="1" color="#228B22" position="0 1.5 0"></a-cone>
+        </a-entity>
+        <!-- Árbol 2 -->
+        <a-entity position="5 0.5 -5">
+            <a-cylinder height="2" radius="0.2" color="#8B4513"></a-cylinder>
+            <a-cone height="3" radius-bottom="1" color="#228B22" position="0 1.5 0"></a-cone>
+        </a-entity>
+        <!-- Árbol 3 -->
+        <a-entity position="0 0.5 -10">
+            <a-cylinder height="2" radius="0.2" color="#8B4513"></a-cylinder>
+            <a-cone height="3" radius-bottom="1" color="#228B22" position="0 1.5 0"></a-cone>
+        </a-entity>
+    </a-entity>
+
+    <!-- Cubo interactivo con selector de color -->
+    <a-box id="colorBox"
+        position="-3.5 1.0 2.0" 
+        rotation="0 0 0" 
+        scale="1 1 1"
+        color="rgba(255,0,13,0.8)"
+        animation="property: rotation; to: 0 360 0; loop: true; dur: 10000"
+        class="clickable">
+        
+        <!-- Modelo 3D: casco Helmet -->
+        <a-entity
+            position="0 1.0 0"
+            scale="0.6 0.6 0.6"
+            gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/DamagedHelmet/glTF-Binary/DamagedHelmet.glb">
+        </a-entity>
+    </a-box>
+    
+    <!-- Modelo 3D animado: Fox -->
+    <a-entity
+        position="4 0 1"
+        scale="0.01 0.01 0.01"
+        animation-mixer
+        gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Fox/glTF-Binary/Fox.glb">
+    </a-entity>
+    
+    <!-- Panel de navegación principal -->
+    <a-entity id="navigation-panel" position="0 2 -3">
+        <!-- Imagen de inicio (clickeable) -->
+        <a-image id="inicio-btn" 
+                 src="../imagenes/inicio.png" 
+                 position="0 0 0" 
+                 width="2" 
+                 height="2"
+                 class="clickable navigation-btn"
+                 animation="property: scale; startEvents: mouseenter; to: 1.1 1.1 1.1; dur: 200"
+                 animation__reset="property: scale; startEvents: mouseleave; to: 1 1 1; dur: 200">
+        </a-image>
+
+        <!-- Imagen karaoke (clickeable) -->
+        <a-image id="karaoke-btn" 
+                 src="../imagenes/karaoke.png" 
+                 position="-4 0 0" 
+                 width="2" 
+                 height="2"
+                 class="clickable navigation-btn"
+                 animation="property: scale; startEvents: mouseenter; to: 1.1 1.1 1.1; dur: 200"
+                 animation__reset="property: scale; startEvents: mouseleave; to: 1 1 1; dur: 200">
+        </a-image>
+
+        <!-- Imagen lista (clickeable) -->
+        <a-image id="lista-btn" 
+                 src="../imagenes/lista.png" 
+                 position="4 0 0" 
+                 width="2" 
+                 height="2"
+                 class="clickable navigation-btn"
+                 animation="property: scale; startEvents: mouseenter; to: 1.1 1.1 1.1; dur: 200"
+                 animation__reset="property: scale; startEvents: mouseleave; to: 1 1 1; dur: 200">
+        </a-image>
+    </a-entity>
+    
+    <!-- Iluminación mejorada -->
+    <a-entity light="type: ambient; color: #BBB; intensity: 0.8"></a-entity>
+    <a-entity light="type: directional; position: 0 1 1; intensity: 0.8"></a-entity>
+    <a-entity light="type: point; position: 2 2 2; intensity: 0.5"></a-entity>
+    
+    <!-- Cámara con controles VR -->
+    <a-entity id="rig" position="0 1.6 5">
+        <a-entity camera 
+                  look-controls="pointerLockEnabled: true" 
+                  wasd-controls="acceleration: 20">
+        </a-entity>
+        
+        <!-- Controladores VR -->
+        <a-entity id="leftHand" 
+                  hand-controls="hand: left; handModelStyle: lowPoly; color: #ffcccc"
+                  laser-controls="hand: left"
+                  raycaster="objects: .clickable">
+        </a-entity>
+        
+        <a-entity id="rightHand" 
+                  hand-controls="hand: right; handModelStyle: lowPoly; color: #ccffcc"
+                  laser-controls="hand: right"
+                  raycaster="objects: .clickable">
+        </a-entity>
+    </a-entity>
+
+    <!-- Cursor para navegación sin VR -->
+    <a-entity cursor="rayOrigin: mouse" 
+              raycaster="objects: .clickable">
+    </a-entity>
+</a-scene>
+
+<script src="entorno-principal.js"></script>

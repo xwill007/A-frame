@@ -1,0 +1,167 @@
+<!-- Karaoke VR con letras flotantes -->
+<a-scene background="color: #000011" vr-mode-ui="enabled: true">
+    <!-- Ambiente de karaoke -->
+    <a-sky color="#000033"></a-sky>
+    
+    <!-- Plataforma circular para el karaoke -->
+    <a-cylinder position="0 0 0" 
+                rotation="0 0 0" 
+                radius="5" 
+                height="0.2" 
+                color="#333399"
+                material="metalness: 0.8; roughness: 0.2">
+    </a-cylinder>
+    
+    <!-- Luces de discoteca -->
+    <a-entity id="disco-lights">
+        <a-light type="point" 
+                 position="-3 4 0" 
+                 color="#ff0066" 
+                 intensity="2"
+                 animation="property: color; to: #00ff66; dur: 1000; direction: alternate; loop: true">
+        </a-light>
+        <a-light type="point" 
+                 position="3 4 0" 
+                 color="#0066ff" 
+                 intensity="2"
+                 animation="property: color; to: #ff6600; dur: 1500; direction: alternate; loop: true">
+        </a-light>
+        <a-light type="point" 
+                 position="0 4 -3" 
+                 color="#66ff00" 
+                 intensity="2"
+                 animation="property: color; to: #ff0066; dur: 800; direction: alternate; loop: true">
+        </a-light>
+    </a-entity>
+    
+    <!-- Panel de control de música -->
+    <a-entity id="music-control-panel" position="0 1.5 -3">
+        <a-box width="3" height="1.5" depth="0.1" 
+               color="#222222" 
+               material="metalness: 0.5">
+        </a-box>
+        
+        <!-- Botones de control -->
+        <a-entity id="controls" position="0 0 0.1">
+            <!-- Play/Pause -->
+            <a-circle id="play-btn" 
+                      position="-0.8 0 0" 
+                      radius="0.3" 
+                      color="#00ff00"
+                      class="clickable music-control"
+                      animation="property: scale; startEvents: mouseenter; to: 1.1 1.1 1.1; dur: 200"
+                      animation__reset="property: scale; startEvents: mouseleave; to: 1 1 1; dur: 200">
+                <a-text value="PLAY" 
+                        position="0 0 0.01" 
+                        align="center" 
+                        color="#000000"
+                        scale="0.8 0.8 0.8">
+                </a-text>
+            </a-circle>
+            
+            <!-- Stop -->
+            <a-circle id="stop-btn" 
+                      position="0 0 0" 
+                      radius="0.3" 
+                      color="#ff0000"
+                      class="clickable music-control"
+                      animation="property: scale; startEvents: mouseenter; to: 1.1 1.1 1.1; dur: 200"
+                      animation__reset="property: scale; startEvents: mouseleave; to: 1 1 1; dur: 200">
+                <a-text value="STOP" 
+                        position="0 0 0.01" 
+                        align="center" 
+                        color="#ffffff"
+                        scale="0.8 0.8 0.8">
+                </a-text>
+            </a-circle>
+            
+            <!-- Back -->
+            <a-circle id="back-btn" 
+                      position="0.8 0 0" 
+                      radius="0.3" 
+                      color="#ffaa00"
+                      class="clickable music-control"
+                      animation="property: scale; startEvents: mouseenter; to: 1.1 1.1 1.1; dur: 200"
+                      animation__reset="property: scale; startEvents: mouseleave; to: 1 1 1; dur: 200">
+                <a-text value="BACK" 
+                        position="0 0 0.01" 
+                        align="center" 
+                        color="#000000"
+                        scale="0.7 0.7 0.7">
+                </a-text>
+            </a-circle>
+        </a-entity>
+    </a-entity>
+    
+    <!-- Letras flotantes en 3D -->
+    <a-entity id="lyrics-container" position="0 2.5 -2">
+        <!-- Línea actual (más grande y brillante) -->
+        <a-text id="current-line" 
+                value="Imagine there's no heaven" 
+                position="0 0.5 0" 
+                align="center" 
+                color="#ffff00"
+                scale="1.2 1.2 1.2"
+                animation="property: scale; to: 1.3 1.3 1.3; dur: 500; direction: alternate; loop: true">
+        </a-text>
+        
+        <!-- Traducción -->
+        <a-text id="translation-line" 
+                value="Imagina que no hay un cielo" 
+                position="0 0 0" 
+                align="center" 
+                color="#aaffaa"
+                scale="0.8 0.8 0.8">
+        </a-text>
+        
+        <!-- Línea siguiente (preview) -->
+        <a-text id="next-line" 
+                value="It's easy if you try" 
+                position="0 -0.5 0" 
+                align="center" 
+                color="#cccccc"
+                scale="0.6 0.6 0.6">
+        </a-text>
+    </a-entity>
+    
+    <!-- Indicador de progreso -->
+    <a-entity id="progress-bar" position="0 0.5 -2.5">
+        <a-box width="4" height="0.1" depth="0.02" color="#333333"></a-box>
+        <a-box id="progress-fill" 
+               width="0" 
+               height="0.12" 
+               depth="0.03" 
+               color="#00ff00" 
+               position="-2 0 0">
+        </a-box>
+    </a-entity>
+    
+    <!-- Iluminación ambiente -->
+    <a-entity light="type: ambient; color: #404040; intensity: 0.4"></a-entity>
+    
+    <!-- Cámara con controles VR -->
+    <a-entity id="rig" position="0 1.6 3">
+        <a-entity camera 
+                  look-controls="pointerLockEnabled: true" 
+                  wasd-controls="acceleration: 15">
+        </a-entity>
+        
+        <!-- Controladores VR -->
+        <a-entity hand-controls="hand: left; handModelStyle: lowPoly"
+                  laser-controls="hand: left"
+                  raycaster="objects: .clickable">
+        </a-entity>
+        
+        <a-entity hand-controls="hand: right; handModelStyle: lowPoly"
+                  laser-controls="hand: right"  
+                  raycaster="objects: .clickable">
+        </a-entity>
+    </a-entity>
+
+    <!-- Cursor para navegación sin VR -->
+    <a-entity cursor="rayOrigin: mouse" 
+              raycaster="objects: .clickable">
+    </a-entity>
+</a-scene>
+
+<script src="karaoke-vr.js"></script>
