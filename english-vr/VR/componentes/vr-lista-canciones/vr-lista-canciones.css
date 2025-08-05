@@ -1,0 +1,219 @@
+/* Estilos para la lista de canciones VR */
+
+.song-list-container {
+    background: linear-gradient(135deg, #6a2c70, #4a1a5a);
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 10px 30px rgba(184, 61, 186, 0.3);
+    border: 2px solid #b83dba;
+}
+
+.song-item {
+    background: linear-gradient(135deg, #8e44ad, #6a2c70);
+    border-radius: 8px;
+    padding: 10px;
+    margin: 5px 0;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    border: 1px solid #b83dba;
+}
+
+.song-item:hover {
+    background: linear-gradient(135deg, #9b59b6, #8e44ad);
+    transform: translateX(5px);
+    box-shadow: 0 5px 15px rgba(184, 61, 186, 0.4);
+}
+
+.song-item.selected {
+    background: linear-gradient(135deg, #a569bd, #9b59b6);
+    border-color: #ffffff;
+    box-shadow: 0 0 15px rgba(184, 61, 186, 0.6);
+}
+
+.song-title {
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 2px;
+}
+
+.song-artist {
+    color: #cccccc;
+    font-size: 12px;
+    font-style: italic;
+}
+
+.song-level {
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.level-principiante {
+    background: #00ff00;
+    color: #000000;
+}
+
+.level-intermedio {
+    background: #ffff00;
+    color: #000000;
+}
+
+.level-avanzado {
+    background: #ff4444;
+    color: #ffffff;
+}
+
+.song-duration {
+    color: #b83dba;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.play-button {
+    background: linear-gradient(135deg, #00aa00, #008800);
+    color: #ffffff;
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.play-button:hover {
+    background: linear-gradient(135deg, #00cc00, #00aa00);
+    transform: scale(1.1);
+    box-shadow: 0 0 10px rgba(0, 170, 0, 0.5);
+}
+
+.navigation-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+    padding: 10px;
+    background: rgba(74, 26, 90, 0.5);
+    border-radius: 8px;
+}
+
+.nav-button {
+    background: linear-gradient(135deg, #555555, #333333);
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 15px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.3s ease;
+}
+
+.nav-button:hover {
+    background: linear-gradient(135deg, #666666, #444444);
+    transform: translateY(-2px);
+}
+
+.nav-button:disabled {
+    background: #333333;
+    color: #666666;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.page-indicator {
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.song-list-title {
+    color: #ffffff;
+    text-align: center;
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 20px;
+    text-shadow: 0 0 10px rgba(184, 61, 186, 0.8);
+}
+
+/* Efectos de partículas y animaciones */
+.music-particle {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(circle, #b83dba, transparent);
+    animation: float-music 3s ease-in-out infinite;
+}
+
+@keyframes float-music {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-15px) rotate(180deg); }
+}
+
+.music-glow {
+    box-shadow: 0 0 20px rgba(184, 61, 186, 0.6);
+    animation: pulse-music 2s ease-in-out infinite;
+}
+
+@keyframes pulse-music {
+    0%, 100% { box-shadow: 0 0 20px rgba(184, 61, 186, 0.6); }
+    50% { box-shadow: 0 0 30px rgba(184, 61, 186, 0.9); }
+}
+
+/* Scrollbar personalizado */
+.song-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.song-list::-webkit-scrollbar-track {
+    background: rgba(74, 26, 90, 0.3);
+    border-radius: 3px;
+}
+
+.song-list::-webkit-scrollbar-thumb {
+    background: #b83dba;
+    border-radius: 3px;
+}
+
+.song-list::-webkit-scrollbar-thumb:hover {
+    background: #d44bd8;
+}
+
+/* Efectos de hover y focus */
+.music-interactive:hover {
+    transform: scale(1.02);
+    transition: transform 0.2s ease;
+}
+
+.music-interactive:active {
+    transform: scale(0.98);
+}
+
+/* Responsivo para diferentes tamaños */
+@media (max-width: 768px) {
+    .song-list-container {
+        padding: 15px;
+        margin: 10px;
+    }
+    
+    .song-item {
+        padding: 8px;
+    }
+    
+    .song-title {
+        font-size: 14px;
+    }
+    
+    .song-artist {
+        font-size: 11px;
+    }
+    
+    .navigation-controls {
+        flex-direction: column;
+        gap: 10px;
+    }
+}

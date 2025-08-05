@@ -7,6 +7,7 @@
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="componentes/vr-formulario-registro/vr-formulario-registro.js"></script>
     <script src="componentes/vr-formulario-login/vr-formulario-login.js"></script>
+    <script src="componentes/vr-lista-canciones/vr-lista-canciones-simple.js"></script>
     <script src="index.js"></script>
 </head>
 <body>
@@ -75,16 +76,11 @@
             formulario-login-vr="formPosition: -3.0 3.5 1.5; buttonPosition: -3 1.5 3; visible: false">
         </a-entity>
 
-         <!-- Imagen lista (navegación a lista de canciones VR) -->
-        <a-image 
-            src="imagenes/lista.png" 
-            position="4 1.5 3" 
-            width="2" 
-            height="2"
-            class="clickable"
-            cursor-raycast
-            cursor-listener
-        ></a-image>
+        <!-- Componente VR de lista de canciones - VERSION SIMPLE -->
+        <a-entity 
+            id="canciones-vr-component" 
+            lista-canciones-vr-simple="buttonPosition: 4 1.5 3">
+        </a-entity>
 
         <!-- Imagen karaoke (navegación al karaoke VR) -->
         <a-image 

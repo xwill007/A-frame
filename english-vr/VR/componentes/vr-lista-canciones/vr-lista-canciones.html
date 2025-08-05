@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista de Canciones VR - Demo</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="vr-lista-canciones.js"></script>
+    <link rel="stylesheet" href="vr-lista-canciones.css">
+</head>
+<body>
+    <a-scene background="color: #2a0845">
+        <!-- Iluminación -->
+        <a-entity light="type: ambient; color: #404040; intensity: 0.4"></a-entity>
+        <a-entity light="type: directional; position: 0 1 1; intensity: 0.6; color: #ffffff"></a-entity>
+        <a-entity light="type: point; position: 2 2 2; intensity: 0.8; color: #b83dba"></a-entity>
+        
+        <!-- Cámara con cursor -->
+        <a-entity camera look-controls wasd-controls position="0 1.6 3">
+            <a-cursor 
+                position="0 0 -1"
+                geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
+                material="color: #b83dba; shader: flat"
+                animation__click="property: scale; startEvents: click; from: 0.1 0.1 0.1; to: 1 1 1; dur: 150"
+                animation__fuse="property: scale; startEvents: fusing; from: 1 1 1; to: 0.1 0.1 0.1; dur: 1500"
+                raycaster="objects: .clickable"
+            ></a-cursor>
+        </a-entity>
+
+        <!-- Componente VR de lista de canciones -->
+        <a-entity 
+            id="canciones-vr-component" 
+            lista-canciones-vr="listPosition: 0 2.5 -2; buttonPosition: 0 1.5 0; visible: false">
+        </a-entity>
+
+        <!-- Plano de fondo -->
+        <a-plane 
+            position="0 0 -4" 
+            rotation="0 0 0" 
+            width="12" 
+            height="8" 
+            color="#4a1a5a"
+            opacity="0.8">
+        </a-plane>
+
+        <!-- Título de demo -->
+        <a-text 
+            value="🎵 DEMO LISTA DE CANCIONES VR 🎵"
+            position="0 3.8 -3"
+            align="center"
+            color="#b83dba"
+            scale="1.8 1.8 1"
+            animation="property: rotation; to: 0 0 3; dur: 4000; dir: alternate; loop: true">
+        </a-text>
+
+        <!-- Instrucciones -->
+        <a-text 
+            value="Haz click en el botón CANCIONES para explorar la música disponible"
+            position="0 -1.8 -2"
+            align="center"
+            color="#ffffff"
+            scale="0.7 0.7 1">
+        </a-text>
+
+        <!-- Controles de teclado -->
+        <a-text 
+            value="Controles: ↑↓ Navegar | ←→ Páginas | Enter Reproducir | ESC Cerrar"
+            position="0 -2.3 -2"
+            align="center"
+            color="#cccccc"
+            scale="0.5 0.5 1">
+        </a-text>
+
+        <!-- Elementos decorativos musicales -->
+        <a-text 
+            value="♪"
+            position="-3 2 -1"
+            color="#b83dba"
+            scale="2 2 1"
+            animation="property: rotation; to: 0 0 360; dur: 8000; loop: true">
+        </a-text>
+
+        <a-text 
+            value="♫"
+            position="3 2.5 -1"
+            color="#d44bd8"
+            scale="1.5 1.5 1"
+            animation="property: rotation; to: 0 0 -360; dur: 6000; loop: true">
+        </a-text>
+
+        <a-text 
+            value="♪"
+            position="0 3.2 -1"
+            color="#aa44bb"
+            scale="1.8 1.8 1"
+            animation="property: position; to: 0 3.5 -1; dur: 2000; dir: alternate; loop: true">
+        </a-text>
+
+    </a-scene>
+</body>
+</html>
