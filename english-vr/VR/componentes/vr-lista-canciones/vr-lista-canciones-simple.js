@@ -1,7 +1,8 @@
 // Componente A-Frame para lista de canciones VR - VERSION FUNCIONAL
 AFRAME.registerComponent('lista-canciones-vr-simple', {
     schema: {
-        buttonPosition: {type: 'vec3', default: {x: 4, y: 1.5, z: 3}}
+        buttonPosition: {type: 'vec3', default: {x: 4, y: 1.5, z: 3}},
+        listPosition: {type: 'vec3', default: {x: 4, y: 2.5, z: 3}}
     },
 
     init: function () {
@@ -70,8 +71,9 @@ AFRAME.registerComponent('lista-canciones-vr-simple', {
 
     createList: function() {
         // Contenedor principal de la lista
+        const data = this.data;
         this.listContainer = document.createElement('a-entity');
-        this.listContainer.setAttribute('position', '0 2.5 -3');
+        this.listContainer.setAttribute('position', `${data.listPosition.x} ${data.listPosition.y} ${data.listPosition.z}`);
         this.listContainer.setAttribute('visible', false);
         
         // Panel de fondo
