@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulario Login VR - Demo</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="vr-formulario-login.js"></script>
+    <link rel="stylesheet" href="vr-formulario-login.css">
+</head>
+<body>
+    <a-scene background="color: #001122">
+        <!-- Iluminación -->
+        <a-entity light="type: ambient; color: #404040; intensity: 0.4"></a-entity>
+        <a-entity light="type: directional; position: 0 1 1; intensity: 0.6; color: #ffffff"></a-entity>
+        <a-entity light="type: point; position: 2 2 2; intensity: 0.8; color: #00ff88"></a-entity>
+        
+        <!-- Cámara con cursor -->
+        <a-entity camera look-controls wasd-controls position="0 1.6 3">
+            <a-cursor 
+                position="0 0 -1"
+                geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
+                material="color: #00ff88; shader: flat"
+                animation__click="property: scale; startEvents: click; from: 0.1 0.1 0.1; to: 1 1 1; dur: 150"
+                animation__fuse="property: scale; startEvents: fusing; from: 1 1 1; to: 0.1 0.1 0.1; dur: 1500"
+                raycaster="objects: .clickable"
+            ></a-cursor>
+        </a-entity>
+
+        <!-- Componente VR de formulario de login -->
+        <a-entity 
+            id="login-vr-component" 
+            formulario-login-vr="formPosition: 0 2 -2; buttonPosition: 0 1.5 0; visible: false">
+        </a-entity>
+
+        <!-- Plano de fondo -->
+        <a-plane 
+            position="0 0 -4" 
+            rotation="0 0 0" 
+            width="10" 
+            height="6" 
+            color="#001133"
+            opacity="0.8">
+        </a-plane>
+
+        <!-- Título de demo -->
+        <a-text 
+            value="DEMO LOGIN VR"
+            position="0 3.5 -3"
+            align="center"
+            color="#00ff88"
+            scale="2 2 1"
+            animation="property: rotation; to: 0 0 5; dur: 3000; dir: alternate; loop: true">
+        </a-text>
+
+        <!-- Instrucciones -->
+        <a-text 
+            value="Haz click en el botón LOGIN VR para comenzar"
+            position="0 -1.5 -2"
+            align="center"
+            color="#ffffff"
+            scale="0.8 0.8 1">
+        </a-text>
+
+    </a-scene>
+</body>
+</html>

@@ -1,5 +1,5 @@
-// Componente A-Frame para formulario de registro VR
-AFRAME.registerComponent('formulario-registro-vr', {
+// Componente A-Frame para formulario de login VR
+AFRAME.registerComponent('formulario-login-vr', {
     schema: {
         formPosition: {type: 'vec3', default: {x: 0, y: 1.5, z: -3}},
         buttonPosition: {type: 'vec3', default: {x: 0, y: 1.5, z: 3}},
@@ -23,7 +23,7 @@ AFRAME.registerComponent('formulario-registro-vr', {
         // Efectos ambientales
         this.createAmbientEffects();
 
-        console.log('Componente formulario-registro-vr inicializado');
+        console.log('Componente formulario-login-vr inicializado');
     },
 
     createTriggerButton: function() {
@@ -31,14 +31,14 @@ AFRAME.registerComponent('formulario-registro-vr', {
         
         // Contenedor del botón
         const buttonContainer = document.createElement('a-entity');
-        buttonContainer.setAttribute('id', 'form-trigger-button');
+        buttonContainer.setAttribute('id', 'login-trigger-button');
         buttonContainer.setAttribute('position', `${data.buttonPosition.x} ${data.buttonPosition.y} ${data.buttonPosition.z}`);
 
         // Fondo del botón
         const buttonPlane = document.createElement('a-plane');
         buttonPlane.setAttribute('width', '2.2');
         buttonPlane.setAttribute('height', '2.2');
-        buttonPlane.setAttribute('color', '#1e3c72');
+        buttonPlane.setAttribute('color', '#2a5d4a');
         buttonPlane.setAttribute('opacity', '0.9');
         buttonPlane.classList.add('clickable');
 
@@ -46,35 +46,37 @@ AFRAME.registerComponent('formulario-registro-vr', {
         const border = document.createElement('a-ring');
         border.setAttribute('radius-inner', '1.05');
         border.setAttribute('radius-outer', '1.15');
-        border.setAttribute('color', '#00ffff');
+        border.setAttribute('color', '#00ff88');
         border.setAttribute('opacity', '0.8');
         border.setAttribute('position', '0 0 0.01');
         border.setAttribute('animation', 'property: rotation; to: 0 0 360; dur: 8000; loop: true');
 
-        // Ícono de usuario
-        const iconCylinder = document.createElement('a-cylinder');
-        iconCylinder.setAttribute('height', '0.4');
-        iconCylinder.setAttribute('radius', '0.3');
-        iconCylinder.setAttribute('color', '#ffffff');
-        iconCylinder.setAttribute('position', '0 0.4 0.02');
+        // Ícono de candado
+        const lockBase = document.createElement('a-box');
+        lockBase.setAttribute('width', '0.4');
+        lockBase.setAttribute('height', '0.3');
+        lockBase.setAttribute('depth', '0.1');
+        lockBase.setAttribute('color', '#ffffff');
+        lockBase.setAttribute('position', '0 0.1 0.02');
 
-        const iconSphere = document.createElement('a-sphere');
-        iconSphere.setAttribute('radius', '0.2');
-        iconSphere.setAttribute('color', '#ffffff');
-        iconSphere.setAttribute('position', '0 0.1 0.02');
+        const lockRing = document.createElement('a-ring');
+        lockRing.setAttribute('radius-inner', '0.12');
+        lockRing.setAttribute('radius-outer', '0.18');
+        lockRing.setAttribute('color', '#ffffff');
+        lockRing.setAttribute('position', '0 0.3 0.02');
 
         // Texto del botón
         const buttonText = document.createElement('a-text');
-        buttonText.setAttribute('value', 'REGISTRO VR');
+        buttonText.setAttribute('value', 'LOGIN VR');
         buttonText.setAttribute('position', '0 -0.4 0.02');
         buttonText.setAttribute('align', 'center');
-        buttonText.setAttribute('color', '#00ffff');
+        buttonText.setAttribute('color', '#00ff88');
         buttonText.setAttribute('scale', '0.6 0.6 1');
         buttonText.setAttribute('animation', 'property: scale; to: 0.7 0.7 1; dur: 2000; dir: alternate; loop: true');
 
         // Subtítulo
         const subtitle = document.createElement('a-text');
-        subtitle.setAttribute('value', 'Crea tu cuenta');
+        subtitle.setAttribute('value', 'Inicia sesión');
         subtitle.setAttribute('position', '0 -0.7 0.02');
         subtitle.setAttribute('align', 'center');
         subtitle.setAttribute('color', '#ffffff');
@@ -83,21 +85,21 @@ AFRAME.registerComponent('formulario-registro-vr', {
         // Efectos de partículas
         const particle1 = document.createElement('a-sphere');
         particle1.setAttribute('radius', '0.02');
-        particle1.setAttribute('color', '#00ffff');
+        particle1.setAttribute('color', '#00ff88');
         particle1.setAttribute('position', '0.8 0.8 0.1');
-        particle1.setAttribute('animation', 'property: position; to: -0.8 -0.8 0.1; dur: 4000; loop: true; dir: alternate');
+        particle1.setAttribute('animation', 'property: position; to: -0.8 -0.8 0.1; dur: 3500; loop: true; dir: alternate');
 
         const particle2 = document.createElement('a-sphere');
         particle2.setAttribute('radius', '0.015');
         particle2.setAttribute('color', '#ffffff');
         particle2.setAttribute('position', '-0.8 0.6 0.1');
-        particle2.setAttribute('animation', 'property: position; to: 0.8 -0.6 0.1; dur: 3000; loop: true; dir: alternate');
+        particle2.setAttribute('animation', 'property: position; to: 0.8 -0.6 0.1; dur: 2800; loop: true; dir: alternate');
 
         // Ensamblar el botón
         buttonContainer.appendChild(buttonPlane);
         buttonContainer.appendChild(border);
-        buttonContainer.appendChild(iconCylinder);
-        buttonContainer.appendChild(iconSphere);
+        buttonContainer.appendChild(lockBase);
+        buttonContainer.appendChild(lockRing);
         buttonContainer.appendChild(buttonText);
         buttonContainer.appendChild(subtitle);
         buttonContainer.appendChild(particle1);
@@ -116,66 +118,62 @@ AFRAME.registerComponent('formulario-registro-vr', {
 
         // Crear el contenedor principal del formulario
         const formContainer = document.createElement('a-entity');
-        formContainer.setAttribute('id', 'form-container-vr');
+        formContainer.setAttribute('id', 'login-container-vr');
         formContainer.setAttribute('position', `${data.formPosition.x} ${data.formPosition.y} ${data.formPosition.z}`);
         formContainer.setAttribute('visible', false);
 
         // Panel principal del formulario
         const mainPanel = document.createElement('a-plane');
-        mainPanel.setAttribute('width', '6');
-        mainPanel.setAttribute('height', '8');
-        mainPanel.setAttribute('color', '#1e3c72');
+        mainPanel.setAttribute('width', '5');
+        mainPanel.setAttribute('height', '6');
+        mainPanel.setAttribute('color', '#2a5d4a');
         mainPanel.setAttribute('opacity', '0.9');
         mainPanel.setAttribute('material', 'shader: flat');
         mainPanel.classList.add('clickable');
 
         // Borde brillante
         const border = document.createElement('a-ring');
-        border.setAttribute('radius-inner', '2.9');
-        border.setAttribute('radius-outer', '3.1');
-        border.setAttribute('color', '#00ffff');
+        border.setAttribute('radius-inner', '2.4');
+        border.setAttribute('radius-outer', '2.6');
+        border.setAttribute('color', '#00ff88');
         border.setAttribute('opacity', '0.6');
         border.setAttribute('position', '0 0 0.01');
         border.setAttribute('animation', 'property: rotation; to: 0 0 360; dur: 10000; loop: true');
 
         // Título
         const title = document.createElement('a-text');
-        title.setAttribute('value', 'REGISTRO VR');
-        title.setAttribute('position', '0 3.5 0.1');
+        title.setAttribute('value', 'INICIAR SESIÓN');
+        title.setAttribute('position', '0 2.5 0.1');
         title.setAttribute('align', 'center');
         title.setAttribute('color', '#ffffff');
         title.setAttribute('font', 'roboto');
-        title.setAttribute('material', 'color: #00ffff; shader: msdf');
-        title.setAttribute('scale', '1.5 1.5 1');
-        title.setAttribute('animation', 'property: scale; to: 1.6 1.6 1; dir: alternate; dur: 2000; loop: true');
+        title.setAttribute('material', 'color: #00ff88; shader: msdf');
+        title.setAttribute('scale', '1.3 1.3 1');
+        title.setAttribute('animation', 'property: scale; to: 1.4 1.4 1; dir: alternate; dur: 2000; loop: true');
 
-        // Campo Nombre
-        const nameField = this.createInputField('NOMBRE:', 'Ingresa tu nombre...', '0 2.5 0.1', 'name-field');
-        
-        // Campo Email
-        const emailField = this.createInputField('EMAIL:', 'ejemplo@correo.com', '0 1.5 0.1', 'email-field');
+        // Campo Email/Usuario
+        const emailField = this.createInputField('EMAIL:', 'usuario@ejemplo.com', '0 1.5 0.1', 'email-field');
         
         // Campo Contraseña
         const passwordField = this.createInputField('CONTRASEÑA:', '••••••••', '0 0.5 0.1', 'password-field');
 
-        // Selector de Nivel
-        const levelSelector = this.createLevelSelector();
+        // Checkbox "Recordarme"
+        const rememberCheckbox = this.createCheckbox('RECORDARME', '0 -0.5 0.1', 'remember-checkbox');
 
-        // Botón Registrarse
-        const registerButton = this.createButton('REGISTRARSE', '#00ffff', '0 -1.8 0.1', 'register-btn');
+        // Botón Iniciar Sesión
+        const loginButton = this.createButton('INICIAR SESIÓN', '#00ff88', '0 -1.5 0.1', 'login-btn');
 
         // Botón Cerrar
-        const closeButton = this.createButton('CERRAR', '#666666', '0 -2.8 0.1', 'close-btn');
+        const closeButton = this.createButton('CERRAR', '#666666', '0 -2.3 0.1', 'close-btn');
 
         // Agregar todos los elementos al contenedor
         formContainer.appendChild(mainPanel);
         formContainer.appendChild(border);
         formContainer.appendChild(title);
-        formContainer.appendChild(nameField);
         formContainer.appendChild(emailField);
         formContainer.appendChild(passwordField);
-        formContainer.appendChild(levelSelector);
-        formContainer.appendChild(registerButton);
+        formContainer.appendChild(rememberCheckbox);
+        formContainer.appendChild(loginButton);
         formContainer.appendChild(closeButton);
 
         // Agregar el contenedor a la escena
@@ -193,23 +191,23 @@ AFRAME.registerComponent('formulario-registro-vr', {
         // Etiqueta
         const labelText = document.createElement('a-text');
         labelText.setAttribute('value', label);
-        labelText.setAttribute('position', '-2.5 0.3 0');
+        labelText.setAttribute('position', '-2 0.3 0');
         labelText.setAttribute('color', '#ffffff');
         labelText.setAttribute('scale', '0.8 0.8 1');
 
         // Campo de entrada
         const inputBox = document.createElement('a-box');
-        inputBox.setAttribute('width', '4');
+        inputBox.setAttribute('width', '3.5');
         inputBox.setAttribute('height', '0.4');
         inputBox.setAttribute('depth', '0.1');
-        inputBox.setAttribute('color', '#2a2a4a');
+        inputBox.setAttribute('color', '#1a3d2a');
         inputBox.classList.add('input-field', 'clickable');
         inputBox.setAttribute('position', '0 0 0');
 
         // Texto placeholder
         const placeholderText = document.createElement('a-text');
         placeholderText.setAttribute('value', placeholder);
-        placeholderText.setAttribute('position', '-1.8 0 0.06');
+        placeholderText.setAttribute('position', '-1.6 0 0.06');
         placeholderText.setAttribute('color', '#888888');
         placeholderText.setAttribute('scale', '0.6 0.6 1');
 
@@ -220,85 +218,41 @@ AFRAME.registerComponent('formulario-registro-vr', {
         return fieldContainer;
     },
 
-    createLevelSelector: function() {
-        const levelContainer = document.createElement('a-entity');
-        levelContainer.setAttribute('id', 'level-field');
-        levelContainer.setAttribute('position', '0 -0.5 0.1');
+    createCheckbox: function(label, position, id) {
+        const checkboxContainer = document.createElement('a-entity');
+        checkboxContainer.setAttribute('id', id);
+        checkboxContainer.setAttribute('position', position);
+
+        // Checkbox
+        const checkbox = document.createElement('a-box');
+        checkbox.setAttribute('width', '0.3');
+        checkbox.setAttribute('height', '0.3');
+        checkbox.setAttribute('depth', '0.1');
+        checkbox.setAttribute('color', '#1a3d2a');
+        checkbox.classList.add('checkbox', 'clickable');
+        checkbox.setAttribute('position', '-1.5 0 0');
+
+        // Check mark (inicialmente oculto)
+        const checkMark = document.createElement('a-text');
+        checkMark.setAttribute('value', '✓');
+        checkMark.setAttribute('position', '-1.5 0 0.06');
+        checkMark.setAttribute('align', 'center');
+        checkMark.setAttribute('color', '#00ff88');
+        checkMark.setAttribute('scale', '0.8 0.8 1');
+        checkMark.setAttribute('visible', false);
 
         // Etiqueta
-        const label = document.createElement('a-text');
-        label.setAttribute('value', 'NIVEL:');
-        label.setAttribute('position', '-2.5 0.3 0');
-        label.setAttribute('color', '#ffffff');
-        label.setAttribute('scale', '0.8 0.8 1');
+        const labelText = document.createElement('a-text');
+        labelText.setAttribute('value', label);
+        labelText.setAttribute('position', '-1 0 0');
+        labelText.setAttribute('color', '#ffffff');
+        labelText.setAttribute('scale', '0.7 0.7 1');
 
-        // Contenedor de botones
-        const buttonsContainer = document.createElement('a-entity');
-        buttonsContainer.setAttribute('position', '0 -0.3 0');
+        checkboxContainer.appendChild(checkbox);
+        checkboxContainer.appendChild(checkMark);
+        checkboxContainer.appendChild(labelText);
 
-        // Botón Principiante
-        const beginnerBtn = document.createElement('a-box');
-        beginnerBtn.setAttribute('id', 'beginner-btn');
-        beginnerBtn.setAttribute('width', '1.2');
-        beginnerBtn.setAttribute('height', '0.3');
-        beginnerBtn.setAttribute('depth', '0.1');
-        beginnerBtn.setAttribute('color', '#4CAF50');
-        beginnerBtn.classList.add('level-btn', 'clickable', 'selected');
-        beginnerBtn.setAttribute('position', '-1.3 0 0');
-
-        const beginnerText = document.createElement('a-text');
-        beginnerText.setAttribute('value', 'PRINCIPIANTE');
-        beginnerText.setAttribute('position', '-1.3 0 0.06');
-        beginnerText.setAttribute('align', 'center');
-        beginnerText.setAttribute('color', '#ffffff');
-        beginnerText.setAttribute('scale', '0.4 0.4 1');
-
-        // Botón Intermedio
-        const intermediateBtn = document.createElement('a-box');
-        intermediateBtn.setAttribute('id', 'intermediate-btn');
-        intermediateBtn.setAttribute('width', '1.2');
-        intermediateBtn.setAttribute('height', '0.3');
-        intermediateBtn.setAttribute('depth', '0.1');
-        intermediateBtn.setAttribute('color', '#2196F3');
-        intermediateBtn.classList.add('level-btn', 'clickable');
-        intermediateBtn.setAttribute('position', '0 0 0');
-
-        const intermediateText = document.createElement('a-text');
-        intermediateText.setAttribute('value', 'INTERMEDIO');
-        intermediateText.setAttribute('position', '0 0 0.06');
-        intermediateText.setAttribute('align', 'center');
-        intermediateText.setAttribute('color', '#ffffff');
-        intermediateText.setAttribute('scale', '0.4 0.4 1');
-
-        // Botón Avanzado
-        const advancedBtn = document.createElement('a-box');
-        advancedBtn.setAttribute('id', 'advanced-btn');
-        advancedBtn.setAttribute('width', '1.2');
-        advancedBtn.setAttribute('height', '0.3');
-        advancedBtn.setAttribute('depth', '0.1');
-        advancedBtn.setAttribute('color', '#FF5722');
-        advancedBtn.classList.add('level-btn', 'clickable');
-        advancedBtn.setAttribute('position', '1.3 0 0');
-
-        const advancedText = document.createElement('a-text');
-        advancedText.setAttribute('value', 'AVANZADO');
-        advancedText.setAttribute('position', '1.3 0 0.06');
-        advancedText.setAttribute('align', 'center');
-        advancedText.setAttribute('color', '#ffffff');
-        advancedText.setAttribute('scale', '0.4 0.4 1');
-
-        // Ensamblar
-        buttonsContainer.appendChild(beginnerBtn);
-        buttonsContainer.appendChild(beginnerText);
-        buttonsContainer.appendChild(intermediateBtn);
-        buttonsContainer.appendChild(intermediateText);
-        buttonsContainer.appendChild(advancedBtn);
-        buttonsContainer.appendChild(advancedText);
-
-        levelContainer.appendChild(label);
-        levelContainer.appendChild(buttonsContainer);
-
-        return levelContainer;
+        return checkboxContainer;
     },
 
     createButton: function(text, color, position, id) {
@@ -307,22 +261,22 @@ AFRAME.registerComponent('formulario-registro-vr', {
 
         const button = document.createElement('a-box');
         button.setAttribute('id', id);
-        button.setAttribute('width', text === 'REGISTRARSE' ? '3' : '2');
-        button.setAttribute('height', text === 'REGISTRARSE' ? '0.6' : '0.4');
-        button.setAttribute('depth', text === 'REGISTRARSE' ? '0.15' : '0.1');
+        button.setAttribute('width', text === 'INICIAR SESIÓN' ? '3' : '2');
+        button.setAttribute('height', text === 'INICIAR SESIÓN' ? '0.6' : '0.4');
+        button.setAttribute('depth', text === 'INICIAR SESIÓN' ? '0.15' : '0.1');
         button.setAttribute('color', color);
         button.classList.add('clickable');
 
-        if (text === 'REGISTRARSE') {
+        if (text === 'INICIAR SESIÓN') {
             button.setAttribute('animation', 'property: rotation; to: 0 0 360; dur: 8000; loop: true');
         }
 
         const buttonText = document.createElement('a-text');
         buttonText.setAttribute('value', text);
-        buttonText.setAttribute('position', '0 0 ' + (text === 'REGISTRARSE' ? '0.08' : '0.06'));
+        buttonText.setAttribute('position', '0 0 ' + (text === 'INICIAR SESIÓN' ? '0.08' : '0.06'));
         buttonText.setAttribute('align', 'center');
-        buttonText.setAttribute('color', text === 'REGISTRARSE' ? '#000000' : '#ffffff');
-        buttonText.setAttribute('scale', text === 'REGISTRARSE' ? '0.8 0.8 1' : '0.6 0.6 1');
+        buttonText.setAttribute('color', text === 'INICIAR SESIÓN' ? '#000000' : '#ffffff');
+        buttonText.setAttribute('scale', text === 'INICIAR SESIÓN' ? '0.7 0.7 1' : '0.6 0.6 1');
 
         buttonContainer.appendChild(button);
         buttonContainer.appendChild(buttonText);
@@ -347,16 +301,16 @@ AFRAME.registerComponent('formulario-registro-vr', {
             this.setAttribute('animation__hover', 'property: scale; to: 1 1 1; dur: 200');
         });
 
-        // Eventos del formulario (se configuran cuando se crea)
+        // Eventos del formulario
         this.el.addEventListener('click', function(e) {
             const target = e.target;
             
             if (target.classList.contains('input-field')) {
                 self.handleFieldClick(target);
-            } else if (target.classList.contains('level-btn')) {
-                self.selectLevel(target);
-            } else if (target.id === 'register-btn') {
-                self.handleRegister();
+            } else if (target.classList.contains('checkbox')) {
+                self.toggleCheckbox(target);
+            } else if (target.id === 'login-btn') {
+                self.handleLogin();
             } else if (target.id === 'close-btn') {
                 self.hideForm();
             }
@@ -364,46 +318,97 @@ AFRAME.registerComponent('formulario-registro-vr', {
     },
 
     handleFieldClick: function(field) {
-        // Simulación de entrada de texto
+        // Simulación de entrada de texto con teclado virtual
         const fieldId = field.parentElement.id;
         const textElement = field.parentElement.querySelector('a-text:last-child');
         
+        // Cambiar color del campo activo
+        field.setAttribute('color', '#3a6d5a');
+        field.setAttribute('animation__focus', 'property: scale; to: 1.05 1.05 1.05; dur: 200');
+        
+        // Efecto de brillo
+        field.setAttribute('animation__glow', 'property: rotation; to: 0 0 2; dur: 100; dir: alternate; loop: 2');
+        
+        let sampleText = '';
         switch(fieldId) {
-            case 'name-field':
-                textElement.setAttribute('value', 'Usuario VR');
-                textElement.setAttribute('color', '#ffffff');
-                break;
             case 'email-field':
-                textElement.setAttribute('value', 'usuario@vr.com');
-                textElement.setAttribute('color', '#ffffff');
+                sampleText = 'usuario@vrapp.com';
                 break;
             case 'password-field':
-                textElement.setAttribute('value', '••••••••••');
-                textElement.setAttribute('color', '#ffffff');
+                sampleText = '••••••••••';
                 break;
         }
 
-        // Efecto visual
-        field.setAttribute('animation__click', 'property: scale; to: 1.05 1.05 1.05; dur: 300; dir: alternate; loop: 2');
-    },
-
-    selectLevel: function(selectedBtn) {
-        // Remover selección de todos los botones
-        const levelBtns = this.el.querySelectorAll('.level-btn');
-        levelBtns.forEach(btn => btn.classList.remove('selected'));
+        // Efecto de escritura gradual
+        this.typeText(textElement, sampleText, 100);
         
-        // Seleccionar el botón clickeado
-        selectedBtn.classList.add('selected');
-        selectedBtn.setAttribute('animation__select', 'property: scale; to: 1.1 1.1 1.1; dur: 300; dir: alternate; loop: 2');
-    },
-
-    handleRegister: function() {
-        console.log('Registro VR iniciado');
-        this.showMessage('¡Registro exitoso! Bienvenido a VR English', '#00ff00');
-        
+        // Restaurar color después de la animación
         setTimeout(() => {
-            this.hideForm();
+            field.setAttribute('color', '#1a3d2a');
         }, 2000);
+    },
+
+    typeText: function(element, text, delay) {
+        element.setAttribute('value', '');
+        element.setAttribute('color', '#ffffff');
+        let i = 0;
+        
+        const typing = setInterval(() => {
+            if (i < text.length) {
+                element.setAttribute('value', text.substring(0, i + 1));
+                i++;
+            } else {
+                clearInterval(typing);
+            }
+        }, delay);
+    },
+
+    toggleCheckbox: function(checkbox) {
+        const checkMark = checkbox.parentElement.querySelector('a-text');
+        const isChecked = checkMark.getAttribute('visible');
+        
+        if (isChecked) {
+            checkMark.setAttribute('visible', false);
+            checkbox.setAttribute('color', '#1a3d2a');
+        } else {
+            checkMark.setAttribute('visible', true);
+            checkbox.setAttribute('color', '#2a5d4a');
+            checkbox.setAttribute('animation__check', 'property: scale; to: 1.1 1.1 1.1; dur: 200; dir: alternate; loop: 2');
+        }
+    },
+
+    handleLogin: function() {
+        console.log('Login VR iniciado');
+        
+        // Validación básica (simulada)
+        const emailField = this.el.querySelector('#email-field a-text:last-child');
+        const passwordField = this.el.querySelector('#password-field a-text:last-child');
+        
+        const email = emailField ? emailField.getAttribute('value') : '';
+        const password = passwordField ? passwordField.getAttribute('value') : '';
+        
+        if (!email || email === 'usuario@ejemplo.com' || 
+            !password || password === '••••••••') {
+            this.showMessage('Por favor completa todos los campos', '#ff0000');
+            return;
+        }
+        
+        // Efecto de procesamiento en el botón
+        const loginBtn = this.el.querySelector('#login-btn');
+        if (loginBtn) {
+            loginBtn.setAttribute('animation__processing', 'property: rotation; to: 0 360 0; dur: 2000; loop: 3');
+        }
+        
+        // Simular login exitoso
+        setTimeout(() => {
+            this.showMessage('¡Bienvenido de vuelta!', '#00ff88');
+            
+            setTimeout(() => {
+                this.hideForm();
+                console.log('Login completado exitosamente');
+                // Aquí podrías redirigir a la aplicación principal
+            }, 2000);
+        }, 3000);
     },
 
     showMessage: function(message, color) {
@@ -428,15 +433,15 @@ AFRAME.registerComponent('formulario-registro-vr', {
     },
 
     createAmbientEffects: function() {
-        const colors = ['#00ffff', '#ffffff', '#00ff00'];
+        const colors = ['#00ff88', '#ffffff', '#88ff88', '#aaffaa'];
         
         for (let i = 0; i < 8; i++) {
             const particle = document.createElement('a-sphere');
-            particle.setAttribute('radius', Math.random() * 0.02 + 0.01);
+            particle.setAttribute('radius', Math.random() * 0.015 + 0.008);
             particle.setAttribute('color', colors[Math.floor(Math.random() * colors.length)]);
             
             const x = (Math.random() - 0.5) * 8;
-            const y = Math.random() * 6 + 1;
+            const y = Math.random() * 5 + 1;
             const z = (Math.random() - 0.5) * 6 - 3;
             
             particle.setAttribute('position', `${x} ${y} ${z}`);
@@ -500,4 +505,45 @@ AFRAME.registerComponent('formulario-registro-vr', {
             this.buttonContainer.setAttribute('position', `${buttonPos.x} ${buttonPos.y} ${buttonPos.z}`);
         }
     }
+});
+
+// Funcionalidad adicional para controles de teclado globales del login
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Sistema de login VR cargado');
+    
+    // Controles de teclado para el formulario de login VR
+    document.addEventListener('keydown', function(e) {
+        const loginComponent = document.getElementById('login-vr-component');
+        
+        if (loginComponent) {
+            const formComponent = loginComponent.components['formulario-login-vr'];
+            
+            if (formComponent) {
+                switch(e.key) {
+                    case 'Enter':
+                        if (formComponent.isFormVisible) {
+                            formComponent.handleLogin();
+                        }
+                        break;
+                    case 'Escape':
+                        if (formComponent.isFormVisible) {
+                            formComponent.hideForm();
+                        }
+                        break;
+                    case ' ': // Espacio para toggle checkbox
+                        if (formComponent.isFormVisible) {
+                            const checkbox = loginComponent.querySelector('#remember-checkbox .checkbox');
+                            if (checkbox) formComponent.toggleCheckbox(checkbox);
+                        }
+                        break;
+                }
+            }
+        }
+    });
+    
+    console.log('Controles del formulario de login VR disponibles:');
+    console.log('- Click: Interactuar con campos y botones');
+    console.log('- Espacio: Toggle checkbox "Recordarme" (cuando formulario esté abierto)');
+    console.log('- Enter: Iniciar sesión (cuando formulario esté abierto)');
+    console.log('- ESC: Cerrar formulario');
 });

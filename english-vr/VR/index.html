@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mi Primera Escena VR</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    <script src="componentes/formulario-registro-component.js"></script>
+    <script src="componentes/vr-formulario-registro/vr-formulario-registro.js"></script>
+    <script src="componentes/vr-formulario-login/vr-formulario-login.js"></script>
     <script src="index.js"></script>
 </head>
 <body>
@@ -51,7 +52,7 @@
         <a-entity light="type: point; position: 2 2 2; intensity: 0.5"></a-entity>
         
         <!-- Cámara con cursor -->
-        <a-entity camera look-controls wasd-controls position="0 1.6 5">
+        <a-entity camera look-controls wasd-controls position="0 2.0 5">
             <a-cursor 
                 position="0 0 -1"
                 geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
@@ -68,18 +69,13 @@
             formulario-registro-vr="formPosition: 0 3.5 -1.5; buttonPosition: 0 1.5 3; visible: false">
         </a-entity>
 
-        <!-- Imagen karaoke (navegación al karaoke VR) -->
-        <a-image 
-            src="imagenes/karaoke.png" 
-            position="-4 1.5 3" 
-            width="2" 
-            height="2"
-            class="clickable"
-            cursor-raycast
-            cursor-listener
-        ></a-image>
+        <!-- Componente VR de formulario de login -->
+        <a-entity 
+            id="login-vr-component" 
+            formulario-login-vr="formPosition: -3.0 3.5 1.5; buttonPosition: -3 1.5 3; visible: false">
+        </a-entity>
 
-        <!-- Imagen lista (navegación a lista de canciones VR) -->
+         <!-- Imagen lista (navegación a lista de canciones VR) -->
         <a-image 
             src="imagenes/lista.png" 
             position="4 1.5 3" 
@@ -89,6 +85,19 @@
             cursor-raycast
             cursor-listener
         ></a-image>
+
+        <!-- Imagen karaoke (navegación al karaoke VR) -->
+        <a-image 
+            src="imagenes/karaoke.png" 
+            position="-6 1.5 3" 
+            width="2" 
+            height="2"
+            class="clickable"
+            cursor-raycast
+            cursor-listener
+        ></a-image>
+
+       
 
     </a-scene>
 </body>
