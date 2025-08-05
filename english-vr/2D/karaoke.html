@@ -4,39 +4,22 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Karaoke Educativo</title>
-  <link rel="stylesheet" href="estilos.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(120deg, #8ec5fc, #e0c3fc);
+      min-height: 100vh;
+    }
+    iframe {
+      width: 100%;
+      height: 100vh;
+      border: none;
+    }
+  </style>
 </head>
 <body>
-  <!-- Encabezado -->
-  <header class="cabecera">
-    <h1>Karaoke - Aprende cantando</h1>
-    <a href="canciones.html" class="volver">⬅️ Volver a la lista</a>
-  </header>
-
-  <!-- Contenedor principal del karaoke -->
-  <main class="karaoke-contenedor">
-    <!-- Audio de la canción -->
-    <audio id="audio" controls>
-      <source src="imagine.mp3" type="audio/mpeg">
-      Tu navegador no soporta audio HTML5.
-    </audio>
-
-    <!-- Letras sincronizadas -->
-    <section class="letras-karaoke">
-      <div class="linea">
-        <p class="ingles">Imagine there's no heaven</p>
-        <p class="espanol">Imagina que no hay un cielo</p>
-      </div>
-      <div class="linea">
-        <p class="ingles">It's easy if you try</p>
-        <p class="espanol">Es fácil si lo intentas</p>
-      </div>
-      <div class="linea">
-        <p class="ingles">No hell below us</p>
-        <p class="espanol">No hay infierno debajo de nosotros</p>
-      </div>
-      <!-- Puedes seguir agregando más líneas -->
-    </section>
-  </main>
+  <iframe src="componentes/karaoke/karaoke.html"></iframe>
 </body>
 </html>

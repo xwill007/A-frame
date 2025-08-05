@@ -4,34 +4,22 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Lista de canciones</title>
-  <link rel="stylesheet" href="estilos.css" />
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(120deg, #8ec5fc, #e0c3fc);
+      min-height: 100vh;
+    }
+    iframe {
+      width: 100%;
+      height: 100vh;
+      border: none;
+    }
+  </style>
 </head>
 <body>
-  <!-- Encabezado con título -->
-  <header class="cabecera">
-    <h1>Selecciona una canción para practicar</h1>
-  </header>
-
-  <!-- Lista de canciones -->
-  <section class="lista-canciones">
-    <ol>
-      <li class="cancion">
-        <h2>Imagine - John Lennon</h2>
-        <p>Una canción tranquila con vocabulario sencillo y reflexivo.</p>
-        <a href="karaoke.html" class="boton">🎤 Practicar</a>
-      </li>
-      <li class="cancion">
-        <h2>Let it be - The Beatles</h2>
-        <p>Ideal para principiantes. Tiene frases repetitivas y claras.</p>
-        <a href="karaoke.html" class="boton">🎤 Practicar</a>
-      </li>
-      <li class="cancion">
-        <h2>Perfect - Ed Sheeran</h2>
-        <p>Una canción moderna para practicar tiempos verbales y vocabulario amoroso.</p>
-        <a href="karaoke.html" class="boton">🎤 Practicar</a>
-      </li>
-    </ol>
-  </section>
-  <a href="index.html" class="volver">⬅️ Volver al inicio</a>
+  <iframe src="componentes/lista-canciones/lista-canciones.html"></iframe>
 </body>
 </html>
