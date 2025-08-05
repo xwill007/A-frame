@@ -24,50 +24,27 @@
 
         <!-- Árboles alrededor del escenario -->
         <a-entity id="trees">
+
             <!-- Árbol 1 -->
             <a-entity position="-5 0.5 -5">
                 <a-cylinder height="2" radius="0.2" color="#8B4513"></a-cylinder>
                 <a-cone height="3" radius-bottom="1" color="#228B22" position="0 1.5 0"></a-cone>
             </a-entity>
+
             <!-- Árbol 2 -->
             <a-entity position="5 0.5 -5">
                 <a-cylinder height="2" radius="0.2" color="#8B4513"></a-cylinder>
                 <a-cone height="3" radius-bottom="1" color="#228B22" position="0 1.5 0"></a-cone>
             </a-entity>
+
             <!-- Árbol 3 -->
             <a-entity position="0 0.5 -10">
                 <a-cylinder height="2" radius="0.2" color="#8B4513"></a-cylinder>
                 <a-cone height="3" radius-bottom="1" color="#228B22" position="0 1.5 0"></a-cone>
             </a-entity>
+
         </a-entity>
 
-        <!-- Un cubo -->
-        <a-box id="colorBox"
-            position="-3.5 1.0 2.0" 
-            rotation="0 0 0" 
-            scale="1 1 1"
-            color="rgba(255,0,13,0.8)"
-        >
-        
-        <!-- Modelo 3D: casco Helmet -->
-        <a-entity
-            position="-0 1.0 0"
-            scale="0.6 0.6 0.6"
-            gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/DamagedHelmet/glTF-Binary/DamagedHelmet.glb">
-        </a-entity>
-    
-    </a-box>
-    
-        <!-- Modelo 3D animado: Fox -->
-        <a-entity
-            position="4 0 1"
-            scale="0.01 0.01 0.01"
-            animation-mixer
-            gltf-model="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Fox/glTF-Binary/Fox.glb">
-        </a-entity>
-        
-        
-        
         <!-- Iluminación mejorada -->
         <a-entity light="type: ambient; color: #BBB; intensity: 0.8"></a-entity>
         <a-entity light="type: directional; position: 0 1 1; intensity: 0.8"></a-entity>
