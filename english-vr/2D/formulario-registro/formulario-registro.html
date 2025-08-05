@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Formulario de Registro</title>
+  <link rel="stylesheet" href="formulario-registro.css" />
+</head>
+<body>
+  <!-- Formulario de registro de usuario -->
+  <div class="formulario-registro">
+    <h2>Regístrate para comenzar</h2>
+    <form id="registro-form">
+      <div class="campo">
+        <label for="nombre">Nombre completo:</label>
+        <input type="text" id="nombre" name="nombre" required>
+      </div>
+      
+      <div class="campo">
+        <label for="email">Correo electrónico:</label>
+        <input type="email" id="email" name="email" required>
+      </div>
+      
+      <div class="campo">
+        <label for="password">Contraseña:</label>
+        <input type="password" id="password" name="password" required>
+      </div>
+      
+      <div class="campo">
+        <label for="confirm-password">Confirmar contraseña:</label>
+        <input type="password" id="confirm-password" name="confirm-password" required>
+      </div>
+      
+      <div class="campo">
+        <label for="nivel">Nivel de inglés:</label>
+        <select id="nivel" name="nivel" required>
+          <option value="">Selecciona tu nivel</option>
+          <option value="principiante">Principiante</option>
+          <option value="intermedio">Intermedio</option>
+          <option value="avanzado">Avanzado</option>
+        </select>
+      </div>
+      
+      <button type="submit" class="boton-registro">📝 Registrarse</button>
+    </form>
+  </div>
+  
+  <script src="formulario-registro.js"></script>
+</body>
+</html>
