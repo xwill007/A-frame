@@ -12,14 +12,80 @@ AFRAME.registerComponent('lista-canciones-vr-simple', {
         this.isListVisible = false;
         this.selectedSongIndex = 0;
         
-        // Lista de canciones
+        // Lista de canciones con link de YouTube y frases de letra
         this.songs = [
-            { title: "Hello", artist: "Adele", level: "Principiante", duration: "4:55" },
-            { title: "Yesterday", artist: "The Beatles", level: "Principiante", duration: "2:05" },
-            { title: "Imagine", artist: "John Lennon", level: "Intermedio", duration: "3:01" },
-            { title: "Bohemian Rhapsody", artist: "Queen", level: "Avanzado", duration: "5:55" },
-            { title: "Hotel California", artist: "Eagles", level: "Avanzado", duration: "6:30" },
-            { title: "Shape of You", artist: "Ed Sheeran", level: "Intermedio", duration: "3:53" }
+            {
+                title: "Hello",
+                artist: "Adele",
+                level: "Principiante",
+                duration: "4:55",
+                youtube: "https://www.youtube.com/embed/YQHsXMglC9A",
+                lyrics: [
+                    "Hello, it's me",
+                    "I was wondering if after all these years you'd like to meet",
+                    "To go over everything"
+                ]
+            },
+            {
+                title: "Yesterday",
+                artist: "The Beatles",
+                level: "Principiante",
+                duration: "2:05",
+                youtube: "https://www.youtube.com/embed/NrgmdOz227I",
+                lyrics: [
+                    "Yesterday, all my troubles seemed so far away",
+                    "Now it looks as though they're here to stay",
+                    "Oh, I believe in yesterday"
+                ]
+            },
+            {
+                title: "Imagine",
+                artist: "John Lennon",
+                level: "Intermedio",
+                duration: "3:01",
+                youtube: "https://www.youtube.com/embed/YkgkThdzX-8",
+                lyrics: [
+                    "Imagine there's no heaven",
+                    "It's easy if you try",
+                    "No hell below us, above us only sky"
+                ]
+            },
+            {
+                title: "Bohemian Rhapsody",
+                artist: "Queen",
+                level: "Avanzado",
+                duration: "5:55",
+                youtube: "https://www.youtube.com/embed/fJ9rUzIMcZQ",
+                lyrics: [
+                    "Is this the real life? Is this just fantasy?",
+                    "Caught in a landslide, no escape from reality",
+                    "Open your eyes, look up to the skies and see"
+                ]
+            },
+            {
+                title: "Hotel California",
+                artist: "Eagles",
+                level: "Avanzado",
+                duration: "6:30",
+                youtube: "https://www.youtube.com/embed/EqPtz5qN7HM",
+                lyrics: [
+                    "On a dark desert highway, cool wind in my hair",
+                    "Warm smell of colitas, rising up through the air",
+                    "Up ahead in the distance, I saw a shimmering light"
+                ]
+            },
+            {
+                title: "Shape of You",
+                artist: "Ed Sheeran",
+                level: "Intermedio",
+                duration: "3:53",
+                youtube: "https://www.youtube.com/embed/JGwWNGJdvx8",
+                lyrics: [
+                    "The club isn't the best place to find a lover",
+                    "So the bar is where I go",
+                    "Me and my friends at the table doing shots"
+                ]
+            }
         ];
         
         // Crear elementos
@@ -258,13 +324,13 @@ AFRAME.registerComponent('lista-canciones-vr-simple', {
     playSong: function(index) {
         const song = this.songs[index];
         console.log('Reproduciendo canción:', song.title);
-        
         this.showMessage(`🎵 Reproduciendo: "${song.title}" 🎵`, '#00aa00');
-        
-        // Simular reproducción
-        setTimeout(() => {
-            console.log('Canción terminada');
-        }, 3000);
+
+        // Mostrar visor de canción VR
+        const visor = document.querySelector('#visor-cancion-vr');
+        if (visor && visor.components['visor-cancion-vr']) {
+            visor.components['visor-cancion-vr'].show(song.youtube, song.lyrics);
+        }
     },
     
     showMessage: function(message, color) {

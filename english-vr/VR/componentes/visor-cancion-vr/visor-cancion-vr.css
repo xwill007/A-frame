@@ -1,0 +1,13 @@
+#video-plane {
+    border: 2px solid #b83dba;
+}
+#lyrics-plane {
+    border: 2px solid #fff;
+}
+#close-btn {
+    cursor: pointer;
+    transition: background 0.2s;
+}
+#close-btn:hover {
+    background: #8e44ad;
+}

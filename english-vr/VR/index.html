@@ -8,6 +8,9 @@
     <script src="componentes/vr-formulario-registro/vr-formulario-registro.js"></script>
     <script src="componentes/vr-formulario-login/vr-formulario-login.js"></script>
     <script src="componentes/vr-lista-canciones/vr-lista-canciones-simple.js"></script>
+    <!-- Componente para mostrar iframes de YouTube en A-Frame -->
+    <script src="https://unpkg.com/aframe-htmlembed-component/dist/aframe-htmlembed-component.min.js"></script>
+    <script src="componentes/visor-cancion-vr/visor-cancion-vr.js"></script>
     <script src="index.js"></script>
 </head>
 <body>
@@ -76,10 +79,18 @@
             formulario-login-vr="formPosition: -3.0 3.5 1.5; buttonPosition: -3 1.5 3; visible: false">
         </a-entity>
 
+
         <!-- Componente VR de lista de canciones - VERSION SIMPLE -->
         <a-entity 
             id="canciones-vr-component" 
             lista-canciones-vr-simple="buttonPosition: 4 1.5 3; listPosition: 6 4 .5 -3">
+        </a-entity>
+
+        <!-- Visor de canción VR (video y letra) -->
+        <a-entity 
+            id="visor-cancion-vr" 
+            visor-cancion-vr="visible: false"
+            position="0 2.5 -2">
         </a-entity>
 
         <!-- Imagen karaoke (navegación al karaoke VR) -->
