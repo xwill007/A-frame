@@ -42,6 +42,11 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             this.el.appendChild(videoListContainer);
+
+            // Verificar si la propiedad visible es true y cargar el video inicial
+            if (this.el.getAttribute('visible')) {
+                this.loadVideo(this.data.videoPath);
+            }
         },
 
         loadVideo: function (videoPath) {
