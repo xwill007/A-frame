@@ -22,34 +22,13 @@
     </div>
 
     <a-scene background="color: #ECECEC">
+        
         <!-- Cielo con nubes -->
-        <a-sky src="imagenes/cielo.jpg" rotation="0 -90 0"></a-sky>
+        <a-sky src="imagenes/uni-oscuro2.jpg" rotation="0 -60 0"></a-sky>
+
         <!-- Plano de piso -->
         <a-circle position="0 0 0" rotation="-90 0 0" radius="20" segments="64"
-                  material="src: imagenes/pasto.jpg; repeat: 2 3"></a-circle>
-
-        <!-- Árboles alrededor del escenario -->
-        <a-entity id="trees">
-
-            <!-- Árbol 1 -->
-            <a-entity position="-5 0.5 -5">
-                <a-cylinder height="2" radius="0.2" color="#8B4513"></a-cylinder>
-                <a-cone height="3" radius-bottom="1" color="#228B22" position="0 1.5 0"></a-cone>
-            </a-entity>
-
-            <!-- Árbol 2 -->
-            <a-entity position="5 0.5 -5">
-                <a-cylinder height="2" radius="0.2" color="#8B4513"></a-cylinder>
-                <a-cone height="3" radius-bottom="1" color="#228B22" position="0 1.5 0"></a-cone>
-            </a-entity>
-
-            <!-- Árbol 3 -->
-            <a-entity position="0 0.5 -10">
-                <a-cylinder height="2" radius="0.2" color="#8B4513"></a-cylinder>
-                <a-cone height="3" radius-bottom="1" color="#228B22" position="0 1.5 0"></a-cone>
-            </a-entity>
-
-        </a-entity>
+                  material="src: imagenes/textura-luna1.jpg; repeat: 1 1"></a-circle>
 
         <!-- Iluminación mejorada -->
         <a-entity light="type: ambient; color: #BBB; intensity: 0.8"></a-entity>
@@ -57,7 +36,7 @@
         <a-entity light="type: point; position: 2 2 2; intensity: 0.5"></a-entity>
         
         <!-- Cámara con cursor -->
-        <a-entity camera look-controls wasd-controls position="0 2.0 9">
+        <a-entity camera look-controls wasd-controls position="0 3.0 9">
             <a-cursor 
                 position="0 0 -1"
                 geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
@@ -97,7 +76,7 @@
         <!-- Karaoke VR para pruebas directas con parámetros de video local y lista de videos -->
         <a-entity 
             id="karaoke-vr-component" 
-            karaoke-vr="videoPath: ./videos/mi-video.mp4; videoWidth: 15; videoHeight: 9; videoList: GangstasParadise.mp4,itsMyLife.mp4,StandByMe.mp4; textColor: #00008B; videoPosition: 0 2.5 -3; listPosition: 5 2.5 0; visible: true"
+            karaoke-vr="videoPath: ./videos/mi-video.mp4; videoWidth: 15; videoHeight: 9; videoList: GangstasParadise.mp4,itsMyLife.mp4,StandByMe.mp4; textColor: #8a8a96ff; videoPosition: 0 2.5 -3; listPosition: 5 2.5 0; visible: true"
             position="0 2.5 3"> <!-- Ajustar posición para mayor visibilidad -->
         </a-entity>
 

@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
             videoWidth: { type: 'number', default: 9 },
             videoHeight: { type: 'number', default: 6 },
             videoList: { type: 'string', default: 'GangstasParadise.mp4,itsMyLife.mp4,StandByMe.mp4' },
-            textColor: { type: 'string', default: '#00008B' },
+            textColor: { type: 'string', default: '#8a8a96ff' },
             videoPosition: { type: 'string', default: '0 2.5 3' },
             listPosition: { type: 'string', default: '6 2.5 -3' }
         },
