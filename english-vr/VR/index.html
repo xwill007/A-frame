@@ -8,6 +8,7 @@
     <script src="componentes/vr-formulario-registro/vr-formulario-registro.js"></script>
     <script src="componentes/vr-formulario-login/vr-formulario-login.js"></script>
     <script src="componentes/vr-lista-canciones/vr-lista-canciones-simple.js"></script>
+    <script src="componentes/karaoke-vr/karaoke-vr.js"></script>
     <!-- Componente para mostrar iframes de YouTube en A-Frame -->
     <script src="https://unpkg.com/aframe-htmlembed-component/dist/aframe-htmlembed-component.min.js"></script>
     <script src="componentes/visor-cancion-vr/visor-cancion-vr.js"></script>
@@ -56,7 +57,7 @@
         <a-entity light="type: point; position: 2 2 2; intensity: 0.5"></a-entity>
         
         <!-- Cámara con cursor -->
-        <a-entity camera look-controls wasd-controls position="0 2.0 5">
+        <a-entity camera look-controls wasd-controls position="0 2.0 9">
             <a-cursor 
                 position="0 0 -1"
                 geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
@@ -70,7 +71,7 @@
         <!-- Componente VR de formulario de registro con botón integrado -->
         <a-entity 
             id="registro-vr-component" 
-            formulario-registro-vr="formPosition: 0 3.5 -1.5; buttonPosition: 0 1.5 3; visible: false">
+            formulario-registro-vr="formPosition: -4.5 6 -1.5; buttonPosition: -3 4 3; visible: false">
         </a-entity>
 
         <!-- Componente VR de formulario de login -->
@@ -83,7 +84,7 @@
         <!-- Componente VR de lista de canciones - VERSION SIMPLE -->
         <a-entity 
             id="canciones-vr-component" 
-            lista-canciones-vr-simple="buttonPosition: 4 1.5 3; listPosition: 6 4 .5 -3">
+            lista-canciones-vr-simple="buttonPosition: 6 1.5 3; listPosition: 6 4 .5 -3">
         </a-entity>
 
         <!-- Visor de canción VR (video y letra) -->
@@ -93,18 +94,12 @@
             position="0 2.5 -2">
         </a-entity>
 
-        <!-- Imagen karaoke (navegación al karaoke VR) -->
-        <a-image
-            src="imagenes/karaoke.png" 
-            position="-6 1.5 3" 
-            width="2" 
-            height="2"
-            class="clickable"
-            cursor-raycast
-            cursor-listener
-        ></a-image>
-
-       
+        <!-- Karaoke VR para pruebas directas con parámetros de video local y lista de videos -->
+        <a-entity 
+            id="karaoke-vr-component" 
+            karaoke-vr="videoPath: ./videos/mi-video.mp4; videoWidth: 9; videoHeight: 6; videoList: GangstasParadise.mp4,itsMyLife.mp4,StandByMe.mp4"
+            position="0 2.5 3"> <!-- Ajustar posición para mayor visibilidad -->
+        </a-entity>
 
     </a-scene>
 </body>

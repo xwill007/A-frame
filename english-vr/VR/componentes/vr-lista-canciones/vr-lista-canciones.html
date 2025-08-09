@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lista de Canciones VR - Demo</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    <script src="vr-lista-canciones.js"></script>
+    <script src="https://unpkg.com/aframe-htmlembed-component/dist/aframe-htmlembed-component.min.js"></script>
+    <script src="vr-lista-canciones-simple.js"></script>
     <link rel="stylesheet" href="vr-lista-canciones.css">
 </head>
 <body>
@@ -31,6 +32,13 @@
         <a-entity 
             id="canciones-vr-component" 
             lista-canciones-vr="listPosition: 0 2.5 -2; buttonPosition: 0 1.5 0; visible: false">
+        </a-entity>
+
+        <!-- Componente Karaoke VR para mostrar el video -->
+        <a-entity 
+            id="karaoke-vr-component" 
+            karaoke-vr="visible: false"
+            position="0 2.5 -2">
         </a-entity>
 
         <!-- Plano de fondo -->

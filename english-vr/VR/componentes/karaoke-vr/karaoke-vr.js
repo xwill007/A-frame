@@ -29,15 +29,36 @@ document.addEventListener('DOMContentLoaded', function() {
         const nextLine = document.getElementById('next-line');
         const progressFill = document.getElementById('progress-fill');
         
+        // Contenedor del video de YouTube
+        const youtubeContainer = document.getElementById('youtube-video-container');
+
+        // Función para mostrar el video de YouTube
+        function showYouTubeVideo() {
+            if (youtubeContainer) {
+                youtubeContainer.setAttribute('visible', 'true');
+                console.log('Mostrando video de YouTube');
+            }
+        }
+
+        // Función para ocultar el video de YouTube
+        function hideYouTubeVideo() {
+            if (youtubeContainer) {
+                youtubeContainer.setAttribute('visible', 'false');
+                console.log('Ocultando video de YouTube');
+            }
+        }
+        
         // Controles de música
         if (playBtn) {
             playBtn.addEventListener('click', function() {
                 if (!isPlaying) {
                     startKaraoke();
+                    showYouTubeVideo();
                     this.querySelector('a-text').setAttribute('value', 'PAUSE');
                     this.setAttribute('color', '#ffaa00');
                 } else {
                     pauseKaraoke();
+                    hideYouTubeVideo();
                     this.querySelector('a-text').setAttribute('value', 'PLAY');
                     this.setAttribute('color', '#00ff00');
                 }
@@ -175,4 +196,65 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('- S: Stop');
         console.log('- ESC: Volver');
     });
+    // Componente karaoke-vr.js
+    // Requiere aframe-htmlembed-component para mostrar iframes de YouTube
+    AFRAME.registerComponent('karaoke-vr', {
+        schema: {
+            videoPath: { type: 'string', default: '' },
+            videoWidth: { type: 'number', default: 4 },
+            videoHeight: { type: 'number', default: 2 },
+            videoList: { type: 'string', default: '' }
+        },
+        init: function () {
+            console.log('Inicializando componente karaoke-vr');
+
+            // Crear contenedor para la lista de videos
+            const videoListContainer = document.createElement('a-entity');
+            videoListContainer.setAttribute('position', '0 2 -3');
+
+            // Obtener lista de videos desde la propiedad videoList
+            const videos = this.data.videoList.split(',');
+
+            // Crear elementos para cada video
+            videos.forEach((video, index) => {
+                const videoItem = document.createElement('a-text');
+                videoItem.setAttribute('value', video);
+                videoItem.setAttribute('position', `0 ${-index * 0.5} 0`);
+                videoItem.setAttribute('color', '#FFFFFF');
+                videoItem.setAttribute('class', 'clickable');
+
+                // Agregar evento de clic para seleccionar el video
+                videoItem.addEventListener('click', () => {
+                    console.log(`Seleccionado: ${video}`);
+                    this.loadVideo(`./videos/karaoke/${video}`);
+                });
+
+                videoListContainer.appendChild(videoItem);
+            });
+
+            this.el.appendChild(videoListContainer);
+        },
+
+        loadVideo: function (videoPath) {
+            console.log(`Cargando video: ${videoPath}`);
+
+            // Eliminar cualquier video existente
+            const existingVideo = this.el.querySelector('a-video');
+            if (existingVideo) {
+                this.el.removeChild(existingVideo);
+            }
+
+            // Crear nuevo elemento de video
+            const videoElement = document.createElement('a-video');
+            videoElement.setAttribute('src', videoPath);
+            videoElement.setAttribute('width', this.data.videoWidth);
+            videoElement.setAttribute('height', this.data.videoHeight);
+            videoElement.setAttribute('position', '0 2 -3');
+
+            this.el.appendChild(videoElement);
+        }
+    });
+    
+    // NOTA: Debes incluir la librería aframe-htmlembed-component en tu index.html para que funcione el iframe de YouTube.
+    // <script src="https://unpkg.com/aframe-htmlembed-component/dist/aframe-htmlembed-component.min.js"></script>
 });

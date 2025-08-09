@@ -79,7 +79,7 @@ AFRAME.registerComponent('lista-canciones-vr-simple', {
                 artist: "Ed Sheeran",
                 level: "Intermedio",
                 duration: "3:53",
-                youtube: "https://www.youtube.com/embed/JGwWNGJdvx8",
+                youtube: "https://www.youtube.com/embed/tgbNymZ7vqY", // video que permite embed
                 lyrics: [
                     "The club isn't the best place to find a lover",
                     "So the bar is where I go",
@@ -323,13 +323,13 @@ AFRAME.registerComponent('lista-canciones-vr-simple', {
     
     playSong: function(index) {
         const song = this.songs[index];
-        console.log('Reproduciendo canción:', song.title);
+        console.log('mostrando canción:', song.title);
         this.showMessage(`🎵 Reproduciendo: "${song.title}" 🎵`, '#00aa00');
 
-        // Mostrar visor de canción VR
-        const visor = document.querySelector('#visor-cancion-vr');
-        if (visor && visor.components['visor-cancion-vr']) {
-            visor.components['visor-cancion-vr'].show(song.youtube, song.lyrics);
+        // Mostrar karaoke-vr con el video de la canción
+        const karaoke = document.querySelector('#karaoke-vr-component');
+        if (karaoke && karaoke.components['karaoke-vr']) {
+            karaoke.components['karaoke-vr'].show(song.youtube);
         }
     },
     
