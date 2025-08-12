@@ -7,12 +7,11 @@
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="componentes/vr-formulario-registro/vr-formulario-registro.js"></script>
     <script src="componentes/vr-formulario-login/vr-formulario-login.js"></script>
-    <script src="componentes/vr-lista-canciones/vr-lista-canciones.js"></script>
     <script src="componentes/karaoke-vr/karaoke-vr.js"></script>
+    <script src="index.js"></script>
     <!-- Componente para mostrar iframes de YouTube en A-Frame -->
     <script src="https://unpkg.com/aframe-htmlembed-component/dist/aframe-htmlembed-component.min.js"></script>
-    <script src="componentes/visor-cancion-vr/visor-cancion-vr.js"></script>
-    <script src="index.js"></script>
+    
 </head>
 <body>
     <!-- Selector de color para el cubo -->
@@ -57,20 +56,6 @@
         <a-entity 
             id="login-vr-component" 
             formulario-login-vr="formPosition: -3.0 3.5 1.5; buttonPosition: -6 1.5 3; visible: false">
-        </a-entity>
-
-
-        <!-- Componente VR de lista de canciones - VERSION SIMPLE -->
-        <a-entity 
-            id="canciones-vr-component" 
-            lista-canciones-vr-simple="buttonPosition: 8 1.5 3; listPosition: 12 2.5 3; textColor: #00008B;">
-        </a-entity>
-
-        <!-- Visor de canción VR (video y letra) -->
-        <a-entity 
-            id="visor-cancion-vr" 
-            visor-cancion-vr="visible: false"
-            position="0 2.5 -2">
         </a-entity>
 
         <!-- Karaoke VR para pruebas directas con parámetros de video local y lista de videos -->
