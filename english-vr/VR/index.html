@@ -63,7 +63,7 @@
         <!-- Componente VR de lista de canciones - VERSION SIMPLE -->
         <a-entity 
             id="canciones-vr-component" 
-            lista-canciones-vr-simple="buttonPosition: 6 1.5 3; listPosition: 12 2.5 3; textColor: #00008B;">
+            lista-canciones-vr-simple="buttonPosition: 8 1.5 3; listPosition: 12 2.5 3; textColor: #00008B;">
         </a-entity>
 
         <!-- Visor de canción VR (video y letra) -->
@@ -76,8 +76,17 @@
         <!-- Karaoke VR para pruebas directas con parámetros de video local y lista de videos -->
         <a-entity 
             id="karaoke-vr-component" 
-            karaoke-vr="videoPath: ./videos/mi-video.mp4; videoWidth: 15; videoHeight: 9; videoList: GangstasParadise.mp4,itsMyLife.mp4,StandByMe.mp4; textColor: #8a8a96ff; videoPosition: 0 2.5 -3; listPosition: 5 2.5 0; visible: true"
-            position="0 2.5 3"> <!-- Ajustar posición para mayor visibilidad -->
+            karaoke-vr="videoPath: ./videos/mi-video.mp4; 
+                videoWidth: 15; 
+                videoHeight: 9; 
+                videoList: GangstasParadise.mp4|Coolio|3:45,itsMyLife.mp4|Bon Jovi|4:25,StandByMe.mp4|Ben E. King|2:58; 
+                textColor: #8a8a96ff; 
+                buttonColor: #121093ff; 
+                backgroundColor: #454545ff; 
+                videoPosition: 0 2.5 -3; 
+                listPosition: 9.7 4.5 -3; 
+                visible: true"
+            position="1 2.5 3"> <!-- Ajustar posición para mayor visibilidad -->
         </a-entity>
 
     </a-scene>
