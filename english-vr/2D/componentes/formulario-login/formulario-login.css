@@ -1,0 +1,68 @@
+/* Estilos para el formulario de login */
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f9f9f9;
+  margin: 0;
+  padding: 0;
+}
+
+.login {
+  max-width: 400px;
+  margin: 50px auto;
+  padding: 20px;
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.login h2 {
+  text-align: center;
+  color: #333333;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+}
+
+label {
+  margin-bottom: 5px;
+  color: #555555;
+}
+
+input {
+  margin-bottom: 15px;
+  padding: 10px;
+  border: 1px solid #cccccc;
+  border-radius: 5px;
+}
+
+.boton {
+  padding: 10px;
+  background-color: #4CAF50;
+  color: #ffffff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.boton:hover {
+  background-color: #45a049;
+}
+
+/* Cambiar el estilo del botón Registrarse */
+#mostrar-registro {
+  background-color: #007BFF; /* Color azul */
+  color: #FFFFFF;
+  padding: 10px;
+  width: 100%; /* Mismo tamaño que el botón Iniciar sesión */
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  text-align: center;
+}
+
+#mostrar-registro:hover {
+  background-color: #0056b3; /* Azul más oscuro al pasar el mouse */
+}

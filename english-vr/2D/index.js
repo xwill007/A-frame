@@ -37,4 +37,14 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     };
   });
+
+  // Mostrar el formulario de registro y ocultar el de login
+  const loginIframe = document.getElementById('login-iframe');
+  const registroIframe = document.getElementById('formulario-iframe');
+
+  const mostrarRegistroBtn = document.getElementById('mostrar-registro');
+  mostrarRegistroBtn.addEventListener('click', () => {
+    loginIframe.style.display = 'none';
+    registroIframe.style.display = 'block';
+  });
 });
