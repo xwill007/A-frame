@@ -76,7 +76,7 @@ AFRAME.registerComponent('formulario-login-vr', {
 
         // Subtítulo
         const subtitle = document.createElement('a-text');
-        subtitle.setAttribute('value', 'Inicia sesión');
+        subtitle.setAttribute('value', 'Inicia SESION');
         subtitle.setAttribute('position', '0 -0.7 0.02');
         subtitle.setAttribute('align', 'center');
         subtitle.setAttribute('color', '#ffffff');
@@ -142,7 +142,7 @@ AFRAME.registerComponent('formulario-login-vr', {
 
         // Título
         const title = document.createElement('a-text');
-        title.setAttribute('value', 'INICIAR SESIÓN');
+        title.setAttribute('value', 'INICIAR SESION');
         title.setAttribute('position', '0 2.5 0.1');
         title.setAttribute('align', 'center');
         title.setAttribute('color', '#ffffff');
@@ -160,8 +160,8 @@ AFRAME.registerComponent('formulario-login-vr', {
         // Checkbox "Recordarme"
         const rememberCheckbox = this.createCheckbox('RECORDARME', '0 -0.5 0.1', 'remember-checkbox');
 
-        // Botón Iniciar Sesión
-        const loginButton = this.createButton('INICIAR SESIÓN', '#00ff88', '0 -1.5 0.1', 'login-btn');
+        // Botón Iniciar SESION
+        const loginButton = this.createButton('INICIAR SESION', '#00ff88', '0 -1.5 0.1', 'login-btn');
 
         // Botón Cerrar
         const closeButton = this.createButton('CERRAR', '#666666', '0 -2.3 0.1', 'close-btn');
@@ -261,22 +261,22 @@ AFRAME.registerComponent('formulario-login-vr', {
 
         const button = document.createElement('a-box');
         button.setAttribute('id', id);
-        button.setAttribute('width', text === 'INICIAR SESIÓN' ? '3' : '2');
-        button.setAttribute('height', text === 'INICIAR SESIÓN' ? '0.6' : '0.4');
-        button.setAttribute('depth', text === 'INICIAR SESIÓN' ? '0.15' : '0.1');
+        button.setAttribute('width', text === 'INICIAR SESION' ? '3' : '2');
+        button.setAttribute('height', text === 'INICIAR SESION' ? '0.6' : '0.4');
+        button.setAttribute('depth', text === 'INICIAR SESION' ? '0.15' : '0.1');
         button.setAttribute('color', color);
         button.classList.add('clickable');
 
-        if (text === 'INICIAR SESIÓN') {
+        if (text === 'INICIAR SESION') {
             button.setAttribute('animation', 'property: rotation; to: 0 0 360; dur: 8000; loop: true');
         }
 
         const buttonText = document.createElement('a-text');
         buttonText.setAttribute('value', text);
-        buttonText.setAttribute('position', '0 0 ' + (text === 'INICIAR SESIÓN' ? '0.08' : '0.06'));
+        buttonText.setAttribute('position', '0 0 ' + (text === 'INICIAR SESION' ? '0.08' : '0.06'));
         buttonText.setAttribute('align', 'center');
-        buttonText.setAttribute('color', text === 'INICIAR SESIÓN' ? '#000000' : '#ffffff');
-        buttonText.setAttribute('scale', text === 'INICIAR SESIÓN' ? '0.7 0.7 1' : '0.6 0.6 1');
+        buttonText.setAttribute('color', text === 'INICIAR SESION' ? '#000000' : '#ffffff');
+        buttonText.setAttribute('scale', text === 'INICIAR SESION' ? '0.7 0.7 1' : '0.6 0.6 1');
 
         buttonContainer.appendChild(button);
         buttonContainer.appendChild(buttonText);
@@ -544,6 +544,6 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Controles del formulario de login VR disponibles:');
     console.log('- Click: Interactuar con campos y botones');
     console.log('- Espacio: Toggle checkbox "Recordarme" (cuando formulario esté abierto)');
-    console.log('- Enter: Iniciar sesión (cuando formulario esté abierto)');
+    console.log('- Enter: Iniciar SESION (cuando formulario esté abierto)');
     console.log('- ESC: Cerrar formulario');
 });
