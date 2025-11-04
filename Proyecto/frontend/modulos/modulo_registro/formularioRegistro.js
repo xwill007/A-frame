@@ -1,13 +1,22 @@
 export default class FormularioRegistro {
-    constructor(container) {
+    constructor(container, position = '0 0 0') {
         this.container = container;
+        this.position = position;
     }
 
     render() {
         const formulario = document.createElement('a-entity');
+        formulario.setAttribute('position', this.position);
+
+        const fondo = document.createElement('a-plane');
+        fondo.setAttribute('geometry', 'primitive: plane; height: 6; width: 5');
+        fondo.setAttribute('material', 'color: #808080; opacity: 0.9');
+        fondo.setAttribute('position', '0 1.5 -0.01');
+        fondo.setAttribute('shadow', 'cast: true');
+        formulario.appendChild(fondo);
 
         const titulo = document.createElement('a-text');
-        titulo.setAttribute('value', 'Registro');
+        titulo.setAttribute('value', 'Registro Importado');
         titulo.setAttribute('align', 'center');
         titulo.setAttribute('color', '#FFF');
         titulo.setAttribute('width', '4');
