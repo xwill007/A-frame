@@ -5,11 +5,95 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aprende Inglés con VR</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        a-scene {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        .form-container {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 300px;
+            margin: auto;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin: 10px 0 5px;
+        }
+
+        input, select, button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
 </head>
 <body>
     <a-scene>
-        <a-entity geometry="primitive: plane; height: 2; width: 3" material="color: #fff" position="0 1.5 -3">
-            <iframe src="modulos/modulo_registro/index.html" style="width:100%; height:100%; border:none;"></iframe>
+        <a-entity geometry="primitive: plane; height: 6; width: 5" material="color: #007BFF; opacity: 0.9" position="0 1.5 -6" shadow="cast: true">
+            <a-entity position="0 -1.5 0.01">
+                <a-entity position="0 3.2 0">
+                    <a-text value="Registro" align="center" color="#FFF" width="4" position="0 0.5 0"></a-text>
+                </a-entity>
+
+                <a-entity position="0 2.8 0">
+                    <a-text value="Nombre:" color="#FFF" width="4" position="-1.5 0 0"></a-text>
+                    <a-plane id="nombre" position="0 -0.1 0" width="3" height="0.5" color="#007BFF" shadow="cast: true"></a-plane>
+                </a-entity>
+
+                <a-entity position="0 2.1 0">
+                    <a-text value="Correo:" color="#FFF" width="4" position="-1.5 0 0"></a-text>
+                    <a-plane id="correo" position="0 -0.1 0" width="3" height="0.5" color="#007BFF" shadow="cast: true"></a-plane>
+                </a-entity>
+
+                <a-entity position="0 1.4 0">
+                    <a-text value="Contraseña:" color="#FFF" width="4" position="-1.5 0 0"></a-text>
+                    <a-plane id="contrasena" position="0 -0.1 0" width="3" height="0.5" color="#007BFF" shadow="cast: true"></a-plane>
+                </a-entity>
+
+                <a-entity position="0 0.7 0">
+                    <a-text value="Nivel de inglés:" color="#FFF" width="4" position="-1.5 0 0"></a-text>
+                    <a-plane id="nivel" position="0 -0.1 0" width="3" height="0.5" color="#007BFF" shadow="cast: true"></a-plane>
+                </a-entity>
+
+                <a-entity position="0 -0.2 0">
+                    <a-text value="Registrarse" align="center" color="#FFF" width="4" position="0 0 0"></a-text>
+                    <a-plane id="submit" position="0 0 0" width="2" height="0.5" color="#0056b3" shadow="cast: true"></a-plane>
+                </a-entity>
+
+            </a-entity>
         </a-entity>
     </a-scene>
 </body>
