@@ -7,6 +7,24 @@ window.addEventListener('DOMContentLoaded', () => {
     const formulario1 = new FormularioRegistro(formularioContainer1, '0 0 -4');
     formulario1.render();
     scene.appendChild(formularioContainer1);
+
+    const inputField = document.getElementById('input-field');
+
+    document.querySelectorAll('[id$="-input"]').forEach(inputPlane => {
+        inputPlane.addEventListener('click', () => {
+            inputField.style.display = 'block';
+            inputField.focus();
+
+            inputField.oninput = () => {
+                const textEntity = document.getElementById(`${inputPlane.id.replace('-input', '-text')}`);
+                textEntity.setAttribute('value', inputField.value);
+            };
+
+            inputField.onblur = () => {
+                inputField.style.display = 'none';
+            };
+        });
+    });
 });
 
 document.getElementById('registro-form').addEventListener('submit', function(event) {
