@@ -1,0 +1,89 @@
+body {
+  background-image: url('/Proyecto/frontend/imagenes/fondovr.jpg'); /* Add the image as background */
+  background-size: cover;      /* Adjust the image to fit the screen */
+  background-repeat: no-repeat; /* Do not repeat the image */
+  background-position: center;  /* Center the image */
+  height: 100vh;                /* Full height */
+  font-family: Arial, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #333;
+}
+
+.formulario-registro {
+  background-color: #ffffff;
+  padding: 30px;
+  border-radius: 15px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+}
+
+.formulario-registro h2 {
+  margin-bottom: 20px;
+  color: #0077cc;
+}
+
+.campo {
+  margin-bottom: 15px;
+  text-align: left;
+}
+
+.campo label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.campo input, .campo select {
+  width: calc(100% - 20px); /* Adjust width to fit within padding */
+  padding: 10px;
+  margin: 5px 0; /* Add margin for spacing */
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 14px;
+  box-sizing: border-box; /* Ensure padding doesn't affect width */
+}
+
+.input-icon {
+  position: relative;
+}
+
+.input-icon i {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #0077cc;
+}
+
+.input-icon input {
+  padding-left: 35px;
+  transition: all 0.3s ease;
+}
+
+input:focus, select:focus {
+  border-color: #0077cc;
+  box-shadow: 0 0 10px rgba(0, 119, 204, 0.5);
+  transform: scale(1.02);
+}
+
+.boton-registro {
+  background: linear-gradient(90deg, #0077cc, #005fa3);
+  color: #ffffff;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.boton-registro:hover {
+  background: linear-gradient(90deg, #005fa3, #0077cc);
+  transform: scale(1.1);
+  box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
+}
