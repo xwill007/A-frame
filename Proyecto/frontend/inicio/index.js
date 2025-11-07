@@ -1,6 +1,10 @@
 document.addEventListener("DOMContentLoaded", () => {
   const btnLogin = document.getElementById("btn-login");
   const loginForm = document.getElementById("login-form");
+  const registroFormEl = document.getElementById('registro-form');
+  const pwdInput = document.getElementById('password');
+  const pwdConfirmInput = document.getElementById('password-confirm');
+  const pwdMsgEl = document.getElementById('password-match-msg');
 
   btnLogin.addEventListener("click", () => {
     loginForm.style.display = "block";
@@ -80,4 +84,57 @@ document.addEventListener("DOMContentLoaded", () => {
     // si algo falla, no rompemos la página
     console.error('Error al mostrar mensaje del servidor:', e);
   }
+
+  // --- Client-side validation: ensure password and confirm match before submitting registro form ---
+  function showPasswordError(text) {
+    if (pwdMsgEl) {
+      pwdMsgEl.textContent = text;
+      pwdMsgEl.style.display = 'block';
+    }
+    if (pwdInput) pwdInput.classList.add('input-error');
+    if (pwdConfirmInput) pwdConfirmInput.classList.add('input-error');
+  }
+
+  function clearPasswordError() {
+    if (pwdMsgEl) {
+      pwdMsgEl.textContent = '';
+      pwdMsgEl.style.display = 'none';
+    }
+    if (pwdInput) pwdInput.classList.remove('input-error');
+    if (pwdConfirmInput) pwdConfirmInput.classList.remove('input-error');
+  }
+
+  if (registroFormEl) {
+    registroFormEl.addEventListener('submit', (e) => {
+      // Only validate if both fields exist
+      if (pwdInput && pwdConfirmInput) {
+        if (pwdInput.value !== pwdConfirmInput.value) {
+          e.preventDefault();
+          showPasswordError('Passwords do not match');
+          pwdConfirmInput.focus();
+          return false;
+        }
+      }
+      // allow submit
+      clearPasswordError();
+      return true;
+    });
+  }
+
+  // Live validation to give immediate feedback
+  function checkMatchLive() {
+    if (!pwdInput || !pwdConfirmInput) return;
+    if (pwdConfirmInput.value.length === 0) {
+      clearPasswordError();
+      return;
+    }
+    if (pwdInput.value === pwdConfirmInput.value) {
+      clearPasswordError();
+    } else {
+      showPasswordError('Passwords do not match');
+    }
+  }
+
+  if (pwdInput) pwdInput.addEventListener('input', checkMatchLive);
+  if (pwdConfirmInput) pwdConfirmInput.addEventListener('input', checkMatchLive);
 });

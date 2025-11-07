@@ -49,6 +49,17 @@ body {
   box-sizing: border-box; /* Ensure padding doesn't affect width */
 }
 
+/* Inline field error message and input error state */
+.field-error {
+  color: #961a1a;
+  font-size: 13px;
+  margin-top: 6px;
+}
+.input-error {
+  border-color: #961a1a !important;
+  box-shadow: 0 0 6px rgba(150,26,26,0.12);
+}
+
 .input-icon {
   position: relative;
 }
