@@ -1,5 +1,6 @@
 body {
-  background-image: url('/Proyecto/frontend/imagenes/fondovr.jpg'); /* Add the image as background */
+  /* Ruta relativa desde `inicio/index.css` hacia `frontend/imagenes/fondovr.jpg` */
+  background-image: url('../imagenes/fondovr.jpg'); /* Add the image as background */
   background-size: cover;      /* Adjust the image to fit the screen */
   background-repeat: no-repeat; /* Do not repeat the image */
   background-position: center;  /* Center the image */
@@ -19,6 +20,7 @@ body {
   width: 100%;
   max-width: 400px;
   text-align: center;
+  margin-bottom: 20px; /* Add spacing between forms */
 }
 
 .formulario-registro h2 {
@@ -86,4 +88,42 @@ input:focus, select:focus {
   background: linear-gradient(90deg, #005fa3, #0077cc);
   transform: scale(1.1);
   box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
+}
+
+#login-form {
+  margin-top: 20px; /* Ensure spacing below the first form */
+}
+
+/* Server message styles (moved from inline styles in index.html) */
+#server-message{
+  display: none;
+  padding: 12px;
+  border-radius: 6px;
+  margin: 12px auto;
+  font-weight: 600;
+  max-width: 360px;
+  text-align: center;
+}
+#server-message.success{
+  background: #e6ffed;
+  color: #116530;
+  border: 1px solid #b7f0c7;
+}
+#server-message.error{
+  background: #ffecec;
+  color: #961a1a;
+  border: 1px solid #f5c2c2;
+}
+
+/* Entry/exit animation for the server message */
+#server-message{
+  /* start hidden with slight translate to animate from below */
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 240ms ease, transform 240ms ease;
+  pointer-events: auto; /* allow reading/selecting text if needed */
+}
+#server-message.visible{
+  opacity: 1;
+  transform: translateY(0);
 }
