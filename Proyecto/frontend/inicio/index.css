@@ -51,8 +51,9 @@ body {
 
 /* Inline field error message and input error state */
 .field-error {
-  color: #961a1a;
-  font-size: 13px;
+  color: #8b0000; /* darker red for better contrast */
+  font-size: 15px; /* increase size */
+  font-weight: 700; /* bold */
   margin-top: 6px;
 }
 .input-error {
@@ -64,17 +65,42 @@ body {
   position: relative;
 }
 
-.input-icon i {
+.input-icon i.fa-lock,
+.input-icon i.fa-user,
+.input-icon i.fa-envelope {
   position: absolute;
   left: 10px;
   top: 50%;
   transform: translateY(-50%);
-  color: #0077cc;
+  color: #0077cc; /* blue for lock, user and email icons */
+  z-index: 2;
 }
 
 .input-icon input {
   padding-left: 35px;
   transition: all 0.3s ease;
+}
+
+/* space on the right for the eye icon */
+.input-icon input {
+  padding-right: 48px; /* room for eye icon */
+}
+
+/* eye toggle icon placed on the right inside the input */
+.input-icon .eye-toggle {
+  position: absolute;
+  right: 25px; /* moved a bit left so it's inside the input and doesn't overlap the edge */
+  top: 50%;
+  transform: translateY(-50%);
+  color: #666;
+  cursor: pointer;
+  font-size: 16px;
+  user-select: none;
+  z-index: 3;
+}
+.input-icon .eye-toggle:focus {
+  outline: none;
+  color: #333;
 }
 
 input:focus, select:focus {
