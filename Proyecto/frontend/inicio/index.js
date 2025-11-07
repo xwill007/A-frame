@@ -1,6 +1,8 @@
 document.addEventListener("DOMContentLoaded", () => {
   const btnLogin = document.getElementById("btn-login");
   const loginForm = document.getElementById("login-form");
+  const btnSend = document.getElementById('btn-send');
+  const loginFormFields = document.getElementById('login-form-fields');
   const registroFormEl = document.getElementById('registro-form');
   const pwdInput = document.getElementById('password');
   const pwdConfirmInput = document.getElementById('password-confirm');
@@ -13,6 +15,70 @@ document.addEventListener("DOMContentLoaded", () => {
     loginForm.style.display = "block";
     btnLogin.style.display = "none"; // Hide the button after showing the form
   });
+
+  // Handle login form submit: collect email/password and POST to login API
+  if (loginFormFields) {
+    loginFormFields.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const emailEl = document.getElementById('user');
+      const passEl = document.getElementById('password-login');
+      const msgDiv = document.getElementById('server-message');
+
+      const email = emailEl ? emailEl.value.trim() : '';
+      const password = passEl ? passEl.value : '';
+
+      // Basic client-side validation
+      if (!email || !password) {
+        if (msgDiv) {
+          msgDiv.textContent = 'Please provide email and password';
+          msgDiv.className = 'error visible';
+          msgDiv.setAttribute('role', 'alert');
+          msgDiv.style.display = 'block';
+        }
+        return;
+      }
+
+      try {
+        // Send credentials to backend login API
+        const res = await fetch('/A-frame/Proyecto/backend/modelos/usuarios/login_usuario.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await res.json();
+
+        if (data.status === 'success') {
+          // Redirect to supplied URL or default to main index
+          const redirectTo = data.redirect || '/A-frame/Proyecto/frontend/index.html';
+          window.location.href = redirectTo;
+          return;
+        } else {
+          // Show error message returned by API
+          if (msgDiv) {
+            msgDiv.textContent = data.message || 'Login failed';
+            msgDiv.classList.remove('success');
+            msgDiv.classList.add('error');
+            msgDiv.setAttribute('role', 'alert');
+            msgDiv.style.display = 'block';
+            requestAnimationFrame(() => msgDiv.classList.add('visible'));
+          } else {
+            // fallback to alert
+            alert(data.message || 'Login failed');
+          }
+        }
+      } catch (err) {
+        console.error('Login request failed', err);
+        if (msgDiv) {
+          msgDiv.textContent = 'Network error while logging in';
+          msgDiv.className = 'error visible';
+          msgDiv.setAttribute('role', 'alert');
+          msgDiv.style.display = 'block';
+        }
+      }
+    });
+  }
 
   // Mostrar mensaje del servidor si se reciben parámetros ?status=&message=
   try {
