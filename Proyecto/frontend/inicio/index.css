@@ -110,7 +110,7 @@ input:focus, select:focus {
 }
 
 .boton-registro {
-  background: linear-gradient(90deg, #0077cc, #005fa3);
+  background: linear-gradient(90deg, #0077cc, #000ea3);
   color: #ffffff;
   padding: 10px 20px;
   border: none;
@@ -122,13 +122,36 @@ input:focus, select:focus {
 }
 
 .boton-registro:hover {
-  background: linear-gradient(90deg, #005fa3, #0077cc);
+  background: linear-gradient(90deg, #000ea3, #0077cc);
   transform: scale(1.1);
   box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
 }
 
+/* Special style for the "I AM REGISTERED" button (violet) */
+#btn-login {
+  background: linear-gradient(90deg, #1f14b0, #46196b);
+  border: none;
+}
+#btn-login:hover {
+  background: linear-gradient(90deg, #46196b, #1f14b0);
+  transform: scale(1.05);
+}
+
 #login-form {
   margin-top: 20px; /* Ensure spacing below the first form */
+}
+
+/* Layout buttons in the registration form vertically */
+#form-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+#form-buttons .boton-registro {
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Server message styles (moved from inline styles in index.html) */

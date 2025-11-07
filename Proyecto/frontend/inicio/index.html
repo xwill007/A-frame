@@ -13,10 +13,10 @@
     <div id="forms-container"> 
 
     <div class="formulario-registro">
-        <h2>Register to Get Started</h2>
+        <h2>Register to Get Started (registrarse para comenzar)</h2>
     <form id="registro-form" action="http://localhost/A-frame/Proyecto/backend/modelos/usuarios/registrar_usuario.php" method="POST">
         <div class="campo">
-            <label for="nombre">Full Name:</label>
+            <label for="nombre">Full Name (nombre completo)</label>
             <div class="input-icon">
             <i class="fas fa-user"></i>
             <input type="text" id="nombre" name="nombre" required>
@@ -24,7 +24,7 @@
         </div>
         
         <div class="campo">
-            <label for="email">Email Address:</label>
+            <label for="email">Email Address (correo electronico)</label>
             <div class="input-icon">
             <i class="fas fa-envelope"></i>
             <input type="email" id="email" name="email" required>
@@ -33,7 +33,7 @@
         </div>
         
         <div class="campo">
-            <label for="password">Password:</label>
+            <label for="password">Password (contraseña)</label>
             <div class="input-icon">
             <i class="fas fa-lock"></i>
             <input type="password" id="password" name="password" required>
@@ -44,7 +44,7 @@
         
         <!-- Confirm password (added) -->
         <div class="campo">
-            <label for="password-confirm">Confirm Password:</label>
+            <label for="password-confirm">Confirm Password (confirmar contraseña)</label>
             <div class="input-icon">
             <i class="fas fa-lock"></i>
             <input type="password" id="password-confirm" name="password_confirm" required>
@@ -54,7 +54,7 @@
         </div>
         
         <div class="campo">
-            <label for="nivel">English Level:</label>
+            <label for="nivel">English Level (nivel de ingles)</label>
             <select id="nivel" name="nivel" required>
             <option value="Beginner" selected>Beginner (principiante)</option>
             <option value="Intermediate">Intermediate (intermedio)</option>
@@ -62,9 +62,11 @@
             </select>
         </div>
         
-    <button type="submit" class="boton-registro">📝REGISTER</button>
-    <button id="btn-login" type="button" class="boton-registro">I AM REGISTERED</button>
-        </form>
+        <div id = "form-buttons">
+            <button type="submit" class="boton-registro">📝REGISTER (registrar)</button>
+            <button id="btn-login" type="button" class="boton-registro">I AM REGISTERED (ya estoy registrado)</button>
+        </div>
+    </form>
     </div>
 
     <!-- Mensaje enviado desde el servidor (registrar_usuario.php) - aparecerá debajo del formulario -->
@@ -76,7 +78,7 @@
         <h2>Log In</h2>
         <form id="login-form-fields">
         <div class="campo">
-            <label for="user">Username:</label>
+            <label for="user">Email (correo electronico):</label>
             <div class="input-icon">
             <i class="fas fa-user"></i>
             <input type="text" id="user" name="user" required>
@@ -84,7 +86,7 @@
         </div>
 
         <div class="campo">
-            <label for="password-login">Password:</label>
+            <label for="password-login">Password (contraseña):</label>
             <div class="input-icon">
             <i class="fas fa-lock"></i>
             <input type="password" id="password-login" name="password-login" required>
@@ -92,7 +94,7 @@
             </div>
         </div>
 
-        <button type="submit" class="boton-registro">Log In</button>
+        <button type="submit" class="boton-registro">Log In (iniciar sesión)</button>
         </form>
         
     </div>
