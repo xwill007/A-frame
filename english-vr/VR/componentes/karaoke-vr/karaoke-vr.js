@@ -75,17 +75,138 @@ document.addEventListener('DOMContentLoaded', function() {
                 titleText.setAttribute('width', 2.8); // Ajustar el ancho del texto para que se ajuste al cuadro
                 titleText.setAttribute('position', '0 0 0.1');
 
-                // Agregar evento de clic para seleccionar el video
-                button.addEventListener('click', () => {
-                    console.log(`Seleccionado: ${fileName}`);
+                // Hacer el botón accesible por teclado
+                button.setAttribute('tabindex', '0');
+
+                // Función única que activa la selección desde cualquier fuente de entrada
+                const activateSelection = (evt) => {
+                    // Evitar manejos duplicados si un evento fue prevenido
+                    if (evt && evt.defaultPrevented) return;
+                    console.log(`Seleccionado: ${fileName}`, evt && evt.type);
                     this.loadVideo(`./videos/karaoke/${fileName}`);
+                };
+
+                // Añadir listeners para varios tipos de entrada: mouse, touch, y eventos típicos de controles VR/hand
+                const inputEvents = [
+                    'click',
+                    'mousedown',
+                    'touchstart',
+                    // Eventos emitidos por controladores VR (nombres comunes según plataformas)
+                    'triggerdown',
+                    'gripdown',
+                    'abuttondown',
+                    'xbuttondown',
+                    'ybuttondown'
+                ];
+                inputEvents.forEach((ev) => button.addEventListener(ev, activateSelection));
+
+                // Soporte de teclado (Enter / Space) cuando el plano recibe foco
+                button.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        activateSelection(e);
+                    }
                 });
+                // Guardar referencia a la función de activación en el propio elemento para uso por raycast manual
+                button._activateSelection = activateSelection;
 
                 button.appendChild(titleText);
                 videoListContainer.appendChild(button);
+
+                // Guardar referencia para raycasting manual (mouse/touch)
+                if (!this._karaokeButtons) this._karaokeButtons = [];
+                this._karaokeButtons.push(button);
             });
 
             this.el.appendChild(videoListContainer);
+
+            // Configurar raycasting manual para clicks del mouse/touch si no hay cursor con rayOrigin: mouse
+            const setupPointerRaycast = () => {
+                const sceneEl = this.el.sceneEl;
+                if (!sceneEl || !sceneEl.camera) return;
+
+                const canvas = sceneEl.canvas;
+                if (!canvas) return;
+
+                // Raycaster reutilizable
+                const three = AFRAME && AFRAME.THREE ? AFRAME.THREE : window.THREE;
+                if (!three) return;
+                const raycaster = new three.Raycaster();
+
+                // Construir mapa mesh -> buttonEl para buscar el elemento a partir del intersect
+                const buildMeshMap = () => {
+                    const meshList = [];
+                    const meshToEl = new Map();
+                    (this._karaokeButtons || []).forEach((btnEl) => {
+                        // recorrer hijos threejs del object3D
+                        btnEl.object3D.traverse((obj) => {
+                            if (obj.isMesh) {
+                                meshList.push(obj);
+                                meshToEl.set(obj, btnEl);
+                            }
+                        });
+                    });
+                    return { meshList, meshToEl };
+                };
+
+                let meshData = buildMeshMap();
+
+                const getPointerNDC = (clientX, clientY) => {
+                    const rect = canvas.getBoundingClientRect();
+                    const x = ((clientX - rect.left) / rect.width) * 2 - 1;
+                    const y = -((clientY - rect.top) / rect.height) * 2 + 1;
+                    return { x, y };
+                };
+
+                const handlePointer = (ev) => {
+                    // soporte touch
+                    let clientX, clientY;
+                    if (ev.touches && ev.touches.length) {
+                        clientX = ev.touches[0].clientX;
+                        clientY = ev.touches[0].clientY;
+                    } else {
+                        clientX = ev.clientX;
+                        clientY = ev.clientY;
+                    }
+
+                    const ndc = getPointerNDC(clientX, clientY);
+                    raycaster.setFromCamera(ndc, sceneEl.camera);
+
+                    // refrescar mapa si necesario
+                    if (!meshData || meshData.meshList.length === 0) meshData = buildMeshMap();
+
+                    const intersects = raycaster.intersectObjects(meshData.meshList, true);
+                    if (intersects && intersects.length > 0) {
+                        const mesh = intersects[0].object;
+                        const btnEl = meshData.meshToEl.get(mesh);
+                        if (btnEl) {
+                            // Preferir llamar a la función guardada en el elemento (si existe)
+                            if (typeof btnEl._activateSelection === 'function') {
+                                try { btnEl._activateSelection({ type: 'pointerdown', defaultPrevented: false }); } catch (err) { console.warn('Error al ejecutar _activateSelection:', err); }
+                            } else {
+                                // Como fallback, despachar un evento 'click' para activar los listeners existentes
+                                try { btnEl.dispatchEvent(new Event('click', { bubbles: true, cancelable: true })); } catch (err) { console.warn('Error al despachar click:', err); }
+                            }
+                            // evitar que el evento nativo propague si corresponde
+                            ev.preventDefault();
+                        }
+                    }
+                };
+
+                // Añadir listeners al canvas
+                canvas.addEventListener('mousedown', handlePointer, { passive: false });
+                canvas.addEventListener('touchstart', handlePointer, { passive: false });
+
+                // Reconstruir mesh map cuando cambie la geometría (por si hay re-render)
+                this.el.addEventListener('object3dset', () => { meshData = buildMeshMap(); });
+            };
+
+            // Si la escena aún no ha inicializado la cámara/canvas, esperar al evento 'renderstart'
+            if (this.el.sceneEl && this.el.sceneEl.camera && this.el.sceneEl.canvas) {
+                setupPointerRaycast();
+            } else if (this.el.sceneEl) {
+                this.el.sceneEl.addEventListener('renderstart', setupPointerRaycast);
+            }
 
             // Verificar si la propiedad visible es true y cargar el video inicial
             if (this.el.getAttribute('visible')) {
