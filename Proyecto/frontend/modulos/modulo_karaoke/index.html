@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Primera Escena VR</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <!-- El resto de scripts se cargan desde index.js (dinámicamente) -->
+    <script type="module" src="index.js" defer></script>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+
+    <a-scene>
+        <a-entity id="formulario" position="0 1.5 -6">
+            <a-entity id="nombre" position="0 2.8 0">
+                <a-text value="Nombre:" color="#FFF" width="4" position="-1.5 0 0"></a-text>
+                <a-plane id="nombre-input" position="0 -0.1 0" width="3" height="0.5" color="#007BFF" shadow="cast: true"></a-plane>
+                <a-text id="nombre-text" value="" color="#FFF" width="3" position="0 -0.1 0.01"></a-text>
+            </a-entity>
+
+        </a-entity>
+    </a-scene>
+
+</body>
+</html>

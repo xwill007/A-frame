@@ -6,10 +6,17 @@
     <title>Aprende Inglés con VR</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="index.js" type="module" defer></script>
+    <!-- Componente para iframes de YouTube (requerido por karaoke-vr si usas YouTube) -->
+    <script src="https://unpkg.com/aframe-htmlembed-component/dist/aframe-htmlembed-component.min.js"></script>
     <link rel="stylesheet" href="index.css">
 </head>
 <body>
     <a-scene>
+
+        <a-assets>
+            <img id="fondo" src="imagenes/uni-oscuro2.jpg">
+        </a-assets>
+
           <a-entity camera look-controls>
             
             <a-entity 
@@ -22,12 +29,30 @@
 
         </a-entity>
 
+        <!-- Módulo Karaoke integrado -->
         <a-entity 
-            id="registro" 
-            position="0 0 0">
+            id="title-text" 
+            position="0 1.5 -2">
+            <a-text 
+                value="KARAOKE english-vr" 
+                color="#FFFFFF" 
+                align="center">
+            </a-text>
         </a-entity>
 
-        
+        <a-entity 
+            id="karaoke-vr-component" 
+            karaoke-vr="videoPath: ./videos/mi-video.mp4; videoWidth: 15; videoHeight: 9; videoList: GangstasParadise.mp4|Coolio|3:45,itsMyLife.mp4|Bon Jovi|4:25,StandByMe.mp4|Ben E. King|2:58; textColor: #8a8a96ff; buttonColor: #121093ff; backgroundColor: #454545ff; videoPosition: 0 2.5 -3; listPosition: 6 2.5 -3; visible: true"
+            position="0 1.0 -2">
+        </a-entity>
+
+        <a-entity 
+            id="registro" 
+            position="0 6 0">
+        </a-entity>
+       
+      <a-sky src="#fondo" rotation="0 -75 0"></a-sky>
+
     </a-scene>
 </body>
 </html>
