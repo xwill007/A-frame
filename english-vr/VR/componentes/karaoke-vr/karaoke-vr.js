@@ -82,8 +82,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 const activateSelection = (evt) => {
                     // Evitar manejos duplicados si un evento fue prevenido
                     if (evt && evt.defaultPrevented) return;
-                    console.log(`Seleccionado: ${fileName}`, evt && evt.type);
-                    this.loadVideo(`./videos/karaoke/${fileName}`);
+                    console.log(`Seleccionado: ${fileName} - ${artistName}`, evt && evt.type);
+                    // Pasar metadata (nombre y artista) a loadVideo para que el botón EVALUATE pueda usarla
+                    this.loadVideo(`./videos/karaoke/${fileName}`, { fileName, artistName });
                 };
 
                 // Añadir listeners para varios tipos de entrada: mouse, touch, y eventos típicos de controles VR/hand
@@ -214,13 +215,29 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         },
 
-        loadVideo: function (videoPath) {
+        loadVideo: function (videoPath, meta) {
             console.log(`Cargando video: ${videoPath}`);
+
+            // Guardar metadata de la canción actual si se provee
+            const fileName = (meta && meta.fileName) ? meta.fileName : null;
+            const artistName = (meta && meta.artistName) ? meta.artistName : null;
+            this._currentSong = { path: videoPath, fileName: fileName, artist: artistName };
 
             // Eliminar cualquier video existente
             const existingVideo = this.el.querySelector('a-video');
             if (existingVideo) {
                 this.el.removeChild(existingVideo);
+            }
+
+            // Eliminar botón de evaluar previo si existe
+            if (this._evaluateButton) {
+                try { this.el.removeChild(this._evaluateButton); } catch (e) {/* ignore */}
+                // remover del array de botones para raycast si estaba ahí
+                if (this._karaokeButtons) {
+                    const idx = this._karaokeButtons.indexOf(this._evaluateButton);
+                    if (idx !== -1) this._karaokeButtons.splice(idx, 1);
+                }
+                this._evaluateButton = null;
             }
 
             // Crear nuevo elemento de video
@@ -231,6 +248,69 @@ document.addEventListener('DOMContentLoaded', function() {
             videoElement.setAttribute('position', this.data.videoPosition);
 
             this.el.appendChild(videoElement);
+
+            // Crear botón "EVALUATE SONG" debajo del video
+            try {
+                const posParts = (this.data.videoPosition || '0 0 0').split(' ').map(parseFloat);
+                const vx = isNaN(posParts[0]) ? 0 : posParts[0];
+                const vy = isNaN(posParts[1]) ? 0 : posParts[1];
+                const vz = isNaN(posParts[2]) ? 0 : posParts[2];
+
+                const evalBtn = document.createElement('a-plane');
+                const btnWidth = Math.min(this.data.videoWidth, 3);
+                const btnHeight = 0.5;
+                // posicionar justo debajo del video (centro del video menos la mitad de su altura)
+                const belowY = vy - (this.data.videoHeight / 2) - (btnHeight / 2) - 0.15;
+                evalBtn.setAttribute('width', btnWidth);
+                evalBtn.setAttribute('height', btnHeight);
+                evalBtn.setAttribute('color', '#1976D2');
+                evalBtn.setAttribute('position', `${vx} ${belowY} ${vz}`);
+                evalBtn.setAttribute('class', 'clickable evaluate-button');
+                evalBtn.setAttribute('tabindex', '0');
+
+                const evalText = document.createElement('a-text');
+                evalText.setAttribute('value', 'EVALUATE SONG');
+                evalText.setAttribute('align', 'center');
+                evalText.setAttribute('color', '#FFFFFF');
+                evalText.setAttribute('width', btnWidth - 0.2);
+                evalText.setAttribute('position', `0 0 0.01`);
+
+                evalBtn.appendChild(evalText);
+
+                // Handler que usa el path actual (videoPath)
+                const onEvaluate = (e) => {
+                    e && e.preventDefault && e.preventDefault();
+                    this.evaluateSong(videoPath);
+                };
+
+                // soportar varios disparadores
+                ['click', 'mousedown', 'touchstart', 'triggerdown', 'gripdown'].forEach((ev) => evalBtn.addEventListener(ev, onEvaluate));
+                evalBtn.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onEvaluate(e); } });
+
+                this.el.appendChild(evalBtn);
+                this._evaluateButton = evalBtn;
+                // Incluir el botón de evaluación en la lista para raycast manual y asignar activador
+                if (!this._karaokeButtons) this._karaokeButtons = [];
+                this._karaokeButtons.push(evalBtn);
+                evalBtn._activateSelection = onEvaluate;
+            } catch (e) {
+                console.warn('No se pudo crear el botón EVALUATE SONG:', e);
+            }
+        }
+
+        ,
+
+        evaluateSong: function(videoPath) {
+            // Acción al evaluar la canción: emitir evento y loguear
+            const current = this._currentSong || { path: videoPath, fileName: null, artist: null };
+            const fileName = current.fileName || (videoPath ? videoPath.split('/').pop() : 'unknown');
+            const artist = current.artist || 'Artista desconocido';
+            console.log('Evaluate song requested for:', videoPath, '-', fileName, '-', artist);
+            try {
+                this.el.emit('evaluate-song', { path: videoPath, fileName: fileName, artist: artist });
+            } catch (e) {
+                // fallback: nada
+            }
         }
     });
     
