@@ -61,7 +61,7 @@ if (password_verify($password, $hash)) {
     if (session_status() !== PHP_SESSION_ACTIVE) session_start();
     $_SESSION['user_id'] = $row['id'];
 
-    echo json_encode(['status' => 'success', 'redirect' => '/A-frame/Proyecto/frontend/index.html']);
+    echo json_encode(['status' => 'success', 'redirect' => '/A-frame/english-vr/VR/index.html']);
 } else {
     echo json_encode(['status' => 'error', 'message' => 'Contraseña incorrecta']);
 }

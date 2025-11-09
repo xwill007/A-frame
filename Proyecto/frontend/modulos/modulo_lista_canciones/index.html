@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Lista de canciones - módulo</title>
+	<script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+	<script type="module" src="index.js" defer></script>
+	<link rel="stylesheet" href="index.css">
+</head>
+<body>
+	<a-scene>
+		<!-- Contenedor donde el script renderizará la lista -->
+		<a-entity id="lista-canciones" position="-1 2 -3"></a-entity>
+
+		<!-- Cámara y cursor para hacer clic en las canciones -->
+		<a-entity camera look-controls position="0 1.6 0">
+			<a-entity cursor="rayOrigin: mouse" raycaster="objects: .clickable" position="0 0 -1.5"
+					  geometry="primitive: ring; radiusInner: 0.01; radiusOuter: 0.02"
+					  material="color: #FFF; shader: flat"></a-entity>
+		</a-entity>
+	</a-scene>
+
+	<!-- Campo input oculto útil para integración con el resto de la app si se desea -->
+	<input id="lista-hidden-input" type="text" style="position:absolute; left:-9999px; top:-9999px;" aria-hidden="true">
+</body>
+</html>
