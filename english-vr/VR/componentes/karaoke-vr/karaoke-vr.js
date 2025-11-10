@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Crear fondo para la lista de videos
             const background = document.createElement('a-plane');
             const buttonCount = this.data.videoList.split(',').length;
-            const backgroundHeight = buttonCount * 0.8 + 1.5; // Altura ajustada para incluir el título
+            const backgroundHeight = buttonCount * 0.8 + 1.0; // Altura ajustada para incluir el título
             background.setAttribute('width', 4); // Ajustar el ancho del fondo
             background.setAttribute('height', backgroundHeight); // Ajustar la altura del fondo
             background.setAttribute('color', backgroundColor);
@@ -257,23 +257,71 @@ document.addEventListener('DOMContentLoaded', function() {
                 const vz = isNaN(posParts[2]) ? 0 : posParts[2];
 
                 const evalBtn = document.createElement('a-plane');
-                const btnWidth = Math.min(this.data.videoWidth, 3);
-                const btnHeight = 0.5;
-                // posicionar justo debajo del video (centro del video menos la mitad de su altura)
-                const belowY = vy - (this.data.videoHeight / 2) - (btnHeight / 2) - 0.15;
-                evalBtn.setAttribute('width', btnWidth);
+                // ancho máximo basado en videoWidth
+                let btnWidth = Math.min(this.data.videoWidth, 4);
+                // Aumentar el alto del botón para que el texto escalado quede centrado y sea más visible
+                const btnHeight = 1.2;
+                // posicionar en la parte superior del video (centro del video más la mitad de su altura)
+                const btnY = vy + (this.data.videoHeight / 2) + (btnHeight / 2) + 0.15;
+                // Ajuste dinámico del ancho en base a la longitud del texto (aprox.)
+                const tmpTextValue = 'EVALUATE SONG';
+                // factor aproximado por carácter (ajustable)
+                const charFactor = 0.12; // world units por carácter en escala 1
+                const scaleFactor = 1.0; // porque usamos scale 2 en el texto
+                const desiredWidth = Math.min(btnWidth, Math.max(1.8, tmpTextValue.length * charFactor * scaleFactor + 0.6));
+                btnWidth = Math.max(btnWidth * 0.6, desiredWidth); // nunca demasiado pequeño
+
+                evalBtn.setAttribute('width', btnWidth + 1);
                 evalBtn.setAttribute('height', btnHeight);
-                evalBtn.setAttribute('color', '#1976D2');
-                evalBtn.setAttribute('position', `${vx} ${belowY} ${vz}`);
+                evalBtn.setAttribute('color', '#d21919ff');
+                evalBtn.setAttribute('position', `${vx} ${btnY} ${vz}`);
                 evalBtn.setAttribute('class', 'clickable evaluate-button');
                 evalBtn.setAttribute('tabindex', '0');
 
                 const evalText = document.createElement('a-text');
                 evalText.setAttribute('value', 'EVALUATE SONG');
                 evalText.setAttribute('align', 'center');
-                evalText.setAttribute('color', '#FFFFFF');
-                evalText.setAttribute('width', btnWidth - 0.2);
-                evalText.setAttribute('position', `0 0 0.01`);
+                evalText.setAttribute('color', '#e81b1bff');
+                // Ajustar width para que el texto escalado no quede recortado (ligeramente mayor que el scale)
+                evalText.setAttribute('width', (btnWidth - 0.2) * 1.8);
+                // Duplicar el tamaño de la letra: aumentar la escala del texto
+                evalText.setAttribute('scale', '2 2 2');
+                // Intentar centrar verticalmente el texto (baseline/anchor si están soportados)
+                try {
+                    evalText.setAttribute('baseline', 'center');
+                    evalText.setAttribute('anchor', 'center');
+                } catch (e) { /* ignore if not supported */ }
+                // Posicionar el texto ligeramente por delante del plano y centrado verticalmente
+                evalText.setAttribute('position', `0 0 0.06`);
+                // Forzar material plano y doble cara para evitar recortes y asegurarlo visible
+                try {
+                    evalText.setAttribute('material', 'shader: flat; side: double; depthTest: false;');
+                } catch (e) { /* ignore */ }
+
+                // Crear dos círculos en los extremos para simular esquinas redondeadas (efecto "pill")
+                try {
+                    const radius = btnHeight / 2;
+                    const offsetX = (btnWidth / 2) - radius +1;
+                    const leftCircle = document.createElement('a-circle');
+                    leftCircle.setAttribute('radius', radius);
+                    leftCircle.setAttribute('segments', 32);
+                    leftCircle.setAttribute('color', '#d21919ff');
+                    leftCircle.setAttribute('position', `${-offsetX} 0 0.001`);
+                    leftCircle.setAttribute('rotation', '0 0 0');
+
+                    const rightCircle = document.createElement('a-circle');
+                    rightCircle.setAttribute('radius', radius);
+                    rightCircle.setAttribute('segments', 32);
+                    rightCircle.setAttribute('color', '#d21919ff');
+                    rightCircle.setAttribute('position', `${offsetX} 0 0.001`);
+                    rightCircle.setAttribute('rotation', '0 0 0');
+
+                    // Añadir círculos como hijos del plano para componer la forma
+                    evalBtn.appendChild(leftCircle);
+                    evalBtn.appendChild(rightCircle);
+                } catch (e) {
+                    // si no se soportan a-circle, ignorar
+                }
 
                 evalBtn.appendChild(evalText);
 
