@@ -273,7 +273,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 evalBtn.setAttribute('width', btnWidth + 1);
                 evalBtn.setAttribute('height', btnHeight);
-                evalBtn.setAttribute('color', '#d21919ff');
+                // Usar color hex de 6 dígitos (A-Frame/three.js no siempre acepta 8 dígitos RGBA)
+                evalBtn.setAttribute('color', '#d21919');
+                // Forzar material plano y doble cara para asegurar color sólido
+                try { evalBtn.setAttribute('material', 'shader: flat; side: double;'); } catch (e) {}
                 evalBtn.setAttribute('position', `${vx} ${btnY} ${vz}`);
                 evalBtn.setAttribute('class', 'clickable evaluate-button');
                 evalBtn.setAttribute('tabindex', '0');
@@ -281,7 +284,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const evalText = document.createElement('a-text');
                 evalText.setAttribute('value', 'EVALUATE SONG');
                 evalText.setAttribute('align', 'center');
-                evalText.setAttribute('color', '#e81b1bff');
+                evalText.setAttribute('color', '#8e8a8aff');
                 // Ajustar width para que el texto escalado no quede recortado (ligeramente mayor que el scale)
                 evalText.setAttribute('width', (btnWidth - 0.2) * 1.8);
                 // Duplicar el tamaño de la letra: aumentar la escala del texto
@@ -305,15 +308,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     const leftCircle = document.createElement('a-circle');
                     leftCircle.setAttribute('radius', radius);
                     leftCircle.setAttribute('segments', 32);
-                    leftCircle.setAttribute('color', '#d21919ff');
-                    leftCircle.setAttribute('position', `${-offsetX} 0 0.001`);
+                    leftCircle.setAttribute('color', '#d21919');
+                    leftCircle.setAttribute('position', `${-offsetX} 0 0.003`);
                     leftCircle.setAttribute('rotation', '0 0 0');
 
                     const rightCircle = document.createElement('a-circle');
                     rightCircle.setAttribute('radius', radius);
                     rightCircle.setAttribute('segments', 32);
-                    rightCircle.setAttribute('color', '#d21919ff');
-                    rightCircle.setAttribute('position', `${offsetX} 0 0.001`);
+                    rightCircle.setAttribute('color', '#d21919');
+                    rightCircle.setAttribute('position', `${offsetX} 0 0.003`);
                     rightCircle.setAttribute('rotation', '0 0 0');
 
                     // Añadir círculos como hijos del plano para componer la forma
