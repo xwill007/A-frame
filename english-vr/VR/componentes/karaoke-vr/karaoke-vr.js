@@ -68,12 +68,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 button.setAttribute('class', 'clickable');
 
                 // Crear texto para el título, artista y duración
-                const titleText = document.createElement('a-text');
-                titleText.setAttribute('value', `${fileName} - ${artistName} (${videoDuration})`);
-                titleText.setAttribute('align', 'center');
-                titleText.setAttribute('color', this.data.textColor);
-                titleText.setAttribute('width', 2.8); // Ajustar el ancho del texto para que se ajuste al cuadro
-                titleText.setAttribute('position', '0 0 0.1');
+                // Crear un texto para la línea superior: número y título, alineado a la izquierda
+                const topText = document.createElement('a-text');
+                topText.setAttribute('value', `${index + 1}. ${fileName}`);
+                topText.setAttribute('align', 'left');
+                topText.setAttribute('color', this.data.textColor);
+                topText.setAttribute('width', 2.6); // ancho disponible dentro del botón
+                // posicionar hacia la izquierda dentro del plano (x negativo)
+                topText.setAttribute('position', `-1.1 0.18 0.1`);
+                // reducir ligeramente el tamaño para que quepa bien
+                topText.setAttribute('wrap-count', '30');
+
+                // Crear un texto para la línea inferior: artista y duración, alineado a la izquierda
+                const bottomText = document.createElement('a-text');
+                bottomText.setAttribute('value', `${artistName} (${videoDuration})`);
+                bottomText.setAttribute('align', 'left');
+                bottomText.setAttribute('color', this.data.textColor);
+                bottomText.setAttribute('width', 2.6);
+                bottomText.setAttribute('position', `-1.1 -0.18 0.1`);
+                bottomText.setAttribute('wrap-count', '40');
 
                 // Hacer el botón accesible por teclado
                 button.setAttribute('tabindex', '0');
@@ -111,7 +124,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Guardar referencia a la función de activación en el propio elemento para uso por raycast manual
                 button._activateSelection = activateSelection;
 
-                button.appendChild(titleText);
+                button.appendChild(topText);
+                button.appendChild(bottomText);
                 videoListContainer.appendChild(button);
 
                 // Guardar referencia para raycasting manual (mouse/touch)
@@ -240,14 +254,203 @@ document.addEventListener('DOMContentLoaded', function() {
                 this._evaluateButton = null;
             }
 
-            // Crear nuevo elemento de video
-            const videoElement = document.createElement('a-video');
-            videoElement.setAttribute('src', videoPath);
-            videoElement.setAttribute('width', this.data.videoWidth);
-            videoElement.setAttribute('height', this.data.videoHeight);
-            videoElement.setAttribute('position', this.data.videoPosition);
+            // Crear nuevo elemento de video: primero creamos un <video> HTML oculto para tener control total
+            try {
+                // remover video HTML previo si existía
+                if (this._htmlVideo && this._htmlVideo.parentNode) {
+                    try { this._htmlVideo.pause(); } catch (e) {}
+                    this._htmlVideo.parentNode.removeChild(this._htmlVideo);
+                }
+            } catch (e) { /* ignore */ }
 
-            this.el.appendChild(videoElement);
+            const vidId = 'karaoke-video-' + Math.floor(Math.random() * 1000000);
+            const htmlVideo = document.createElement('video');
+            htmlVideo.setAttribute('id', vidId);
+            htmlVideo.setAttribute('crossorigin', 'anonymous');
+            htmlVideo.setAttribute('preload', 'metadata');
+            htmlVideo.style.display = 'none';
+            htmlVideo.src = videoPath;
+            document.body.appendChild(htmlVideo);
+            this._htmlVideo = htmlVideo;
+
+            // Crear el a-video y apuntarlo al <video> HTML con selector #id
+            const aVideoEl = document.createElement('a-video');
+            aVideoEl.setAttribute('src', `#${vidId}`);
+            aVideoEl.setAttribute('width', this.data.videoWidth);
+            aVideoEl.setAttribute('height', this.data.videoHeight);
+            aVideoEl.setAttribute('position', this.data.videoPosition);
+            this.el.appendChild(aVideoEl);
+            this._aVideo = aVideoEl;
+
+            // ---- Crear controles como hijos del componente, posicionados debajo del video ----
+            // calcular posición relativa basada en videoPosition y videoHeight
+            const posParts = (this.data.videoPosition || '0 0 0').split(' ').map(parseFloat);
+            const vx = isNaN(posParts[0]) ? 0 : posParts[0];
+            const vy = isNaN(posParts[1]) ? 0 : posParts[1];
+            const vz = isNaN(posParts[2]) ? 0 : posParts[2];
+
+            // eliminar controles previos si existen
+            if (this._controlsEntity) {
+                try { this.el.removeChild(this._controlsEntity); } catch (e) {}
+                this._controlsEntity = null;
+            }
+
+            const controls = document.createElement('a-entity');
+            // separacion por debajo del borde del video
+            const controlOffset = 0.6;
+            const controlsY = vy - (this.data.videoHeight / 2) - controlOffset;
+            controls.setAttribute('position', `${vx} ${controlsY} ${vz}`);
+            controls.setAttribute('id', 'karaoke-controls');
+
+            // fondo y linea
+            const progressBg = document.createElement('a-plane');
+            progressBg.setAttribute('id', 'karaoke-progress-bg');
+            progressBg.setAttribute('width', Math.max(1.8, this.data.videoWidth));
+            progressBg.setAttribute('height', 1.0);
+            progressBg.setAttribute('color', '#101010');
+            progressBg.setAttribute('opacity', '0.6');
+            progressBg.setAttribute('position', `0 -0.05 -0.02`);
+
+            const progressLine = document.createElement('a-plane');
+            progressLine.setAttribute('id', 'karaoke-progress-line');
+            // hacer la linea ligeramente más angosta que el video para tener padding
+            progressLine.setAttribute('width', (this.data.videoWidth * 0.9).toString());
+            progressLine.setAttribute('height', 0.04);
+            progressLine.setAttribute('color', '#bbbbbb');
+            progressLine.setAttribute('position', `0 -0.1 0.01`);
+            progressLine.setAttribute('class', 'clickable');
+
+            const thumb = document.createElement('a-circle');
+            thumb.setAttribute('id', 'karaoke-progress-thumb');
+            thumb.setAttribute('radius', 0.09);
+            thumb.setAttribute('color', '#ffffff');
+            // posicion inicial a la izquierda
+            const initialX = -(parseFloat(progressLine.getAttribute('width')) / 2) || -(this.data.videoWidth * 0.9 / 2);
+            thumb.setAttribute('position', `${initialX} -0.1 0.02`);
+            thumb.setAttribute('class', 'clickable');
+
+            // tiempos
+            const timeElapsed = document.createElement('a-text');
+            timeElapsed.setAttribute('id', 'karaoke-time-elapsed');
+            timeElapsed.setAttribute('value', '0:00');
+            timeElapsed.setAttribute('align', 'left');
+            timeElapsed.setAttribute('color', '#ffffff');
+            timeElapsed.setAttribute('width', 1.6);
+            timeElapsed.setAttribute('position', `${-this.data.videoWidth * 0.45} 0.06 0.02`);
+
+            const timeTotal = document.createElement('a-text');
+            timeTotal.setAttribute('id', 'karaoke-time-total');
+            timeTotal.setAttribute('value', '0:00');
+            timeTotal.setAttribute('align', 'right');
+            timeTotal.setAttribute('color', '#ffffff');
+            timeTotal.setAttribute('width', 1.6);
+            timeTotal.setAttribute('position', `${this.data.videoWidth * 0.45} 0.06 0.02`);
+
+            // botones
+            const btnBack = document.createElement('a-circle');
+            btnBack.setAttribute('id', 'karaoke-btn-back');
+            btnBack.setAttribute('class', 'clickable');
+            btnBack.setAttribute('radius', 0.07);
+            btnBack.setAttribute('color', '#333333');
+            btnBack.setAttribute('position', `-${this.data.videoWidth * 0.2} 0.18 0.02`);
+            const backText = document.createElement('a-text'); backText.setAttribute('value', '<<'); backText.setAttribute('align','center'); backText.setAttribute('color','#ffffff'); backText.setAttribute('position','0 0 0.01'); backText.setAttribute('width','0.6'); btnBack.appendChild(backText);
+
+            const btnPlay = document.createElement('a-circle');
+            btnPlay.setAttribute('id', 'karaoke-btn-play');
+            btnPlay.setAttribute('class', 'clickable');
+            // Diámetro duplicado: radius aumentado de 0.1 -> 0.2
+            btnPlay.setAttribute('radius', 0.2);
+            btnPlay.setAttribute('color', '#121093');
+            btnPlay.setAttribute('position', `0 0.3 0.02`);
+            // Aumentar el ancho del texto para mayor legibilidad
+            const playText = document.createElement('a-text');
+            playText.setAttribute('id','karaoke-play-text');
+            playText.setAttribute('value','Play');
+            playText.setAttribute('align','center');
+            playText.setAttribute('color','#ffffff');
+            playText.setAttribute('position','0 0 0.01');
+            playText.setAttribute('width','4.0');
+            btnPlay.appendChild(playText);
+
+            const btnForward = document.createElement('a-circle');
+            btnForward.setAttribute('id', 'karaoke-btn-forward');
+            btnForward.setAttribute('class', 'clickable');
+            btnForward.setAttribute('radius', 0.07);
+            btnForward.setAttribute('color', '#333333');
+            btnForward.setAttribute('position', `${this.data.videoWidth * 0.2} 0.18 0.02`);
+            const fwdText = document.createElement('a-text'); fwdText.setAttribute('value','>>'); fwdText.setAttribute('align','center'); fwdText.setAttribute('color','#ffffff'); fwdText.setAttribute('position','0 0 0.01'); fwdText.setAttribute('width','0.6'); btnForward.appendChild(fwdText);
+
+            // agregar todos como hijos
+            controls.appendChild(progressBg);
+            controls.appendChild(progressLine);
+            controls.appendChild(thumb);
+            controls.appendChild(timeElapsed);
+            controls.appendChild(timeTotal);
+            controls.appendChild(btnBack);
+            controls.appendChild(btnPlay);
+            controls.appendChild(btnForward);
+
+            this.el.appendChild(controls);
+            this._controlsEntity = controls;
+
+            // ---- lógica de interacción con el HTMLVideoElement ----
+            const video = htmlVideo;
+
+            const formatTime = (sec) => {
+                if (isNaN(sec)) return '0:00';
+                const s = Math.floor(sec % 60).toString().padStart(2, '0');
+                const m = Math.floor(sec / 60);
+                return `${m}:${s}`;
+            };
+
+            const updateUI = () => {
+                const current = video.currentTime || 0;
+                const duration = video.duration || 0;
+                try { timeElapsed.setAttribute('value', formatTime(current)); } catch(e){}
+                try { timeTotal.setAttribute('value', formatTime(duration)); } catch(e){}
+
+                const lineW = parseFloat(progressLine.getAttribute('width')) || (this.data.videoWidth * 0.9);
+                const half = lineW / 2;
+                const ratio = duration ? Math.max(0, Math.min(1, current / duration)) : 0;
+                const x = -half + ratio * lineW;
+                try { thumb.setAttribute('position', `${x} -0.1 0.02`); } catch(e){}
+            };
+
+            // Eventos del video
+            video.addEventListener('timeupdate', updateUI);
+            video.addEventListener('loadedmetadata', updateUI);
+            video.addEventListener('play', () => { try { playText.setAttribute('value','Pause'); } catch(e){} });
+            video.addEventListener('pause', () => { try { playText.setAttribute('value','Play'); } catch(e){} });
+
+            // botones
+            btnPlay.addEventListener('click', () => { if (video.paused) video.play(); else video.pause(); });
+            btnBack.addEventListener('click', () => { video.currentTime = Math.max(0, (video.currentTime || 0) - 10); });
+            btnForward.addEventListener('click', () => { video.currentTime = Math.min(video.duration || (video.currentTime || 0) + 10, video.duration || (video.currentTime || 0) + 10); });
+
+            // click en la barra para seek
+            progressLine.addEventListener('click', (evt) => {
+                try {
+                    const inter = evt.detail && evt.detail.intersection && evt.detail.intersection.point;
+                    if (!inter) return;
+                    const point = inter.clone();
+                    progressLine.object3D.worldToLocal(point);
+                    const lineWidth = parseFloat(progressLine.getAttribute('width')) || (this.data.videoWidth * 0.9);
+                    const half = lineWidth / 2;
+                    const ratio = Math.max(0, Math.min(1, (point.x + half) / lineWidth));
+                    const seekTime = (video.duration || 0) * ratio;
+                    if (!isNaN(seekTime)) video.currentTime = seekTime;
+                } catch (err) { console.error('Error al seekear desde controles del componente:', err); }
+            });
+
+            // comenzar precarga del video para que metadata esté disponible
+            try { video.load(); } catch(e) {}
+
+            // actualizar UI inicial
+            setTimeout(updateUI, 200);
+
+            // guardar referencias para limpieza futura
+            this._video = video;
+            this._aVideo = aVideoEl;
 
             // Crear botón "EVALUATE SONG" debajo del video
             try {

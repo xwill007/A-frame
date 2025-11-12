@@ -9,6 +9,23 @@ if (!isset($conn)) {
     die("No se pudo establecer la conexión a la base de datos.");
 }
 
+// Crear la tabla 'usuarios' si no existe. Esto asegura que el endpoint
+// pueda insertar usuarios aunque la tabla todavía no haya sido creada.
+$create_table_sql = "CREATE TABLE IF NOT EXISTS usuarios (\n"
+    . "id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,\n"
+    . "name VARCHAR(255) NOT NULL,\n"
+    . "email VARCHAR(255) NOT NULL UNIQUE,\n"
+    . "password VARCHAR(255) NOT NULL,\n"
+    . "level VARCHAR(50) DEFAULT NULL,\n"
+    . "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n"
+    . ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
+
+if (!$conn->query($create_table_sql)) {
+    // En caso de error crítico al crear la tabla, detener la ejecución.
+    // En producción conviene registrar el error y mostrar un mensaje genérico.
+    die("Error al crear la tabla 'usuarios': " . $conn->error);
+}
+
 // Comprobación: si la petición HTTP es de tipo POST, procesamos los datos enviados por el formulario
 // Esto evita que el script intente insertar datos cuando se accede con GET u otros métodos
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
