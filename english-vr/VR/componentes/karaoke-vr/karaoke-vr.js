@@ -346,6 +346,31 @@ document.addEventListener('DOMContentLoaded', function() {
             timeTotal.setAttribute('width', 1.6);
             timeTotal.setAttribute('position', `${this.data.videoWidth * 0.45} 0.06 0.02`);
 
+            // Botón/plano que muestra el tiempo transcurrido al inicio de la barra de controles
+            const elapsedBtn = document.createElement('a-plane');
+            elapsedBtn.setAttribute('id', 'karaoke-elapsed-btn');
+            // ancho y alto compactos para parecer botón
+            elapsedBtn.setAttribute('width', 0.9);
+            elapsedBtn.setAttribute('height', 0.32);
+            elapsedBtn.setAttribute('color', '#222222');
+            elapsedBtn.setAttribute('class', 'clickable');
+            // Posicionar al inicio (izquierda) de la barra, ligeramente por encima de la linea
+            const elapsedX = -(this.data.videoWidth * 0.5) - 0.15;
+            elapsedBtn.setAttribute('position', `${elapsedX} 0.06 0.02`);
+
+            const elapsedText = document.createElement('a-text');
+            elapsedText.setAttribute('id', 'karaoke-elapsed-display');
+            elapsedText.setAttribute('value', '0:00');
+            elapsedText.setAttribute('align', 'center');
+            elapsedText.setAttribute('color', '#ffffff');
+            elapsedText.setAttribute('width', 1.2);
+            elapsedText.setAttribute('position', '0.5 0.3 0.01');
+            elapsedText.setAttribute('scale', '6.0 6.0 6.0'); // escalar para mayor legibilidad
+            elapsedBtn.appendChild(elapsedText);
+
+            // Añadir el botón de elapsed al conjunto de controles (al inicio)
+            controls.appendChild(elapsedBtn);
+
             // botones
             const btnBack = document.createElement('a-circle');
             btnBack.setAttribute('id', 'karaoke-btn-back');
@@ -444,6 +469,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 try { timeTotal.setAttribute('value', formatTime(duration)); } catch(e){}
                 // actualizar también la duración mostrada junto al botón Forward (si existe)
                 try { if (typeof fwdTime !== 'undefined') fwdTime.setAttribute('value', formatTime(duration)); } catch(e){}
+                // actualizar el texto del botón elapsed si existe
+                try { if (typeof elapsedText !== 'undefined') elapsedText.setAttribute('value', formatTime(current)); } catch(e){}
 
                 const lineW = parseFloat(progressLine.getAttribute('width')) || (this.data.videoWidth * 0.9);
                 const half = lineW / 2;
