@@ -329,22 +329,9 @@ document.addEventListener('DOMContentLoaded', function() {
             thumb.setAttribute('position', `${initialX} -0.1 0.02`);
             thumb.setAttribute('class', 'clickable');
 
-            // tiempos
-            const timeElapsed = document.createElement('a-text');
-            timeElapsed.setAttribute('id', 'karaoke-time-elapsed');
-            timeElapsed.setAttribute('value', '0:00');
-            timeElapsed.setAttribute('align', 'left');
-            timeElapsed.setAttribute('color', '#ffffff');
-            timeElapsed.setAttribute('width', 1.6);
-            timeElapsed.setAttribute('position', `${-this.data.videoWidth * 0.45} 0.06 0.02`);
-
-            const timeTotal = document.createElement('a-text');
-            timeTotal.setAttribute('id', 'karaoke-time-total');
-            timeTotal.setAttribute('value', '0:00');
-            timeTotal.setAttribute('align', 'right');
-            timeTotal.setAttribute('color', '#ffffff');
-            timeTotal.setAttribute('width', 1.6);
-            timeTotal.setAttribute('position', `${this.data.videoWidth * 0.45} 0.06 0.02`);
+            // Nota: eliminamos las etiquetas pequeñas timeElapsed/timeTotal
+            // porque mostramos un display más grande (`karaoke-elapsed-display`) al inicio
+            // y la duración junto al botón Forward (fwdTime). Esto evita duplicidad visual.
 
             // Botón/plano que muestra el tiempo transcurrido al inicio de la barra de controles
             const elapsedBtn = document.createElement('a-plane');
@@ -363,9 +350,9 @@ document.addEventListener('DOMContentLoaded', function() {
             elapsedText.setAttribute('value', '0:00');
             elapsedText.setAttribute('align', 'center');
             elapsedText.setAttribute('color', '#ffffff');
-            elapsedText.setAttribute('width', 1.2);
-            elapsedText.setAttribute('position', '0.5 0.3 0.01');
-            elapsedText.setAttribute('scale', '6.0 6.0 6.0'); // escalar para mayor legibilidad
+            elapsedText.setAttribute('width', '1.0');
+            elapsedText.setAttribute('position', '0.6 0.3 0.01');
+            elapsedText.setAttribute('scale', '9.0 9.0 9.0'); // escalar para mayor legibilidad
             elapsedBtn.appendChild(elapsedText);
 
             // Añadir el botón de elapsed al conjunto de controles (al inicio)
@@ -375,26 +362,26 @@ document.addEventListener('DOMContentLoaded', function() {
             const btnBack = document.createElement('a-circle');
             btnBack.setAttribute('id', 'karaoke-btn-back');
             btnBack.setAttribute('class', 'clickable');
-            // Aumentar tamaño para mantener proporción con el botón Play (0.07 -> 0.14)
-            btnBack.setAttribute('radius', 0.14);
+            // Aumentar tamaño para mantener proporción con el botón Play (ahora igual que Play)
+            btnBack.setAttribute('radius', 0.2);
             btnBack.setAttribute('color', '#333333');
-            // Elevar Y para alinearlo con el botón Play más grande
-            btnBack.setAttribute('position', `-${this.data.videoWidth * 0.2} 0.3 0.02`);
+            // Elevar Y para alinearlo con el botón Play más grande y separar X ligeramente
+            btnBack.setAttribute('position', `-${this.data.videoWidth * 0.24} 0.3 0.02`);
             const backText = document.createElement('a-text');
             backText.setAttribute('value', '<<');
             backText.setAttribute('align','center');
-            backText.setAttribute('color','#ffffff');
+            backText.setAttribute('color','#ffffffff');
             backText.setAttribute('position','0 0 0.01');
             // Aumentar tamaño del texto: usar scale para agrandar visualmente
             backText.setAttribute('width','1.0');
-            backText.setAttribute('scale','3.0 3.0 3.0');
+            backText.setAttribute('scale','9.0 9.0 9.0');
             btnBack.appendChild(backText);
 
             const btnPlay = document.createElement('a-circle');
             btnPlay.setAttribute('id', 'karaoke-btn-play');
             btnPlay.setAttribute('class', 'clickable');
             // Diámetro duplicado: radius aumentado de 0.1 -> 0.2
-            btnPlay.setAttribute('radius', 0.2);
+            btnPlay.setAttribute('radius', 0.4);
             btnPlay.setAttribute('color', '#121093');
             btnPlay.setAttribute('position', `0 0.3 0.02`);
             // Aumentar el ancho del texto para mayor legibilidad
@@ -404,17 +391,17 @@ document.addEventListener('DOMContentLoaded', function() {
             playText.setAttribute('align','center');
             playText.setAttribute('color','#ffffff');
             playText.setAttribute('position','0 0 0.01');
-            playText.setAttribute('width','4.0');
+            playText.setAttribute('width','9.0');
             btnPlay.appendChild(playText);
 
             const btnForward = document.createElement('a-circle');
             btnForward.setAttribute('id', 'karaoke-btn-forward');
             btnForward.setAttribute('class', 'clickable');
-            // Aumentar tamaño para mantener proporción con el botón Play (0.07 -> 0.14)
-            btnForward.setAttribute('radius', 0.14);
+            // Aumentar tamaño para mantener proporción con el botón Play (ahora igual que Play)
+            btnForward.setAttribute('radius', 0.2);
             btnForward.setAttribute('color', '#333333');
-            // Elevar Y para alinearlo con el botón Play más grande
-            btnForward.setAttribute('position', `${this.data.videoWidth * 0.2} 0.3 0.02`);
+            // Elevar Y para alinearlo con el botón Play más grande y separar X ligeramente
+            btnForward.setAttribute('position', `${this.data.videoWidth * 0.24} 0.3 0.02`);
             const fwdText = document.createElement('a-text');
             fwdText.setAttribute('value','>>');
             fwdText.setAttribute('align','center');
@@ -422,7 +409,7 @@ document.addEventListener('DOMContentLoaded', function() {
             fwdText.setAttribute('position','0 0 0.01');
             // Aumentar tamaño del texto: usar scale para agrandar visualmente
             fwdText.setAttribute('width','1.0');
-            fwdText.setAttribute('scale','3.0 3.0 3.0');
+            fwdText.setAttribute('scale','9.0 9.0 9.0');
             btnForward.appendChild(fwdText);
             // Mostrar duración total al lado del icono >> (se actualizará en updateUI)
             const fwdTime = document.createElement('a-text');
@@ -432,16 +419,14 @@ document.addEventListener('DOMContentLoaded', function() {
             fwdTime.setAttribute('color', '#ffffff');
             fwdTime.setAttribute('width', '1.4');
             // posicionarlo a la derecha del botón
-            fwdTime.setAttribute('position', '3.65 0 0.01');
+            fwdTime.setAttribute('position', '3.0 0 0.01');
             fwdTime.setAttribute('scale', '6.0 6.0 6.0'); // escalar para mayor legibilidad
             btnForward.appendChild(fwdTime);
 
-            // agregar todos como hijos
+            // agregar todos como hijos (omitimos timeElapsed/timeTotal para evitar duplicados)
             controls.appendChild(progressBg);
             controls.appendChild(progressLine);
             controls.appendChild(thumb);
-            controls.appendChild(timeElapsed);
-            controls.appendChild(timeTotal);
             controls.appendChild(btnBack);
             controls.appendChild(btnPlay);
             controls.appendChild(btnForward);
@@ -491,7 +476,14 @@ document.addEventListener('DOMContentLoaded', function() {
             // botones
             btnPlay.addEventListener('click', () => { if (video.paused) video.play(); else video.pause(); });
             btnBack.addEventListener('click', () => { video.currentTime = Math.max(0, (video.currentTime || 0) - 10); });
-            btnForward.addEventListener('click', () => { video.currentTime = Math.min(video.duration || (video.currentTime || 0) + 10, video.duration || (video.currentTime || 0) + 10); });
+            btnForward.addEventListener('click', () => {
+                try {
+                    const cur = (video.currentTime || 0);
+                    const dur = (typeof video.duration === 'number' && !isNaN(video.duration) && isFinite(video.duration)) ? video.duration : Infinity;
+                    const target = Math.min(dur, cur + 10);
+                    video.currentTime = target;
+                } catch (e) { /* ignore */ }
+            });
 
             // click en la barra para seek
             progressLine.addEventListener('click', (evt) => {
