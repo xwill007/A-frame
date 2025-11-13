@@ -350,10 +350,20 @@ document.addEventListener('DOMContentLoaded', function() {
             const btnBack = document.createElement('a-circle');
             btnBack.setAttribute('id', 'karaoke-btn-back');
             btnBack.setAttribute('class', 'clickable');
-            btnBack.setAttribute('radius', 0.07);
+            // Aumentar tamaño para mantener proporción con el botón Play (0.07 -> 0.14)
+            btnBack.setAttribute('radius', 0.14);
             btnBack.setAttribute('color', '#333333');
-            btnBack.setAttribute('position', `-${this.data.videoWidth * 0.2} 0.18 0.02`);
-            const backText = document.createElement('a-text'); backText.setAttribute('value', '<<'); backText.setAttribute('align','center'); backText.setAttribute('color','#ffffff'); backText.setAttribute('position','0 0 0.01'); backText.setAttribute('width','0.6'); btnBack.appendChild(backText);
+            // Elevar Y para alinearlo con el botón Play más grande
+            btnBack.setAttribute('position', `-${this.data.videoWidth * 0.2} 0.3 0.02`);
+            const backText = document.createElement('a-text');
+            backText.setAttribute('value', '<<');
+            backText.setAttribute('align','center');
+            backText.setAttribute('color','#ffffff');
+            backText.setAttribute('position','0 0 0.01');
+            // Aumentar tamaño del texto: usar scale para agrandar visualmente
+            backText.setAttribute('width','1.0');
+            backText.setAttribute('scale','3.0 3.0 3.0');
+            btnBack.appendChild(backText);
 
             const btnPlay = document.createElement('a-circle');
             btnPlay.setAttribute('id', 'karaoke-btn-play');
@@ -375,10 +385,31 @@ document.addEventListener('DOMContentLoaded', function() {
             const btnForward = document.createElement('a-circle');
             btnForward.setAttribute('id', 'karaoke-btn-forward');
             btnForward.setAttribute('class', 'clickable');
-            btnForward.setAttribute('radius', 0.07);
+            // Aumentar tamaño para mantener proporción con el botón Play (0.07 -> 0.14)
+            btnForward.setAttribute('radius', 0.14);
             btnForward.setAttribute('color', '#333333');
-            btnForward.setAttribute('position', `${this.data.videoWidth * 0.2} 0.18 0.02`);
-            const fwdText = document.createElement('a-text'); fwdText.setAttribute('value','>>'); fwdText.setAttribute('align','center'); fwdText.setAttribute('color','#ffffff'); fwdText.setAttribute('position','0 0 0.01'); fwdText.setAttribute('width','0.6'); btnForward.appendChild(fwdText);
+            // Elevar Y para alinearlo con el botón Play más grande
+            btnForward.setAttribute('position', `${this.data.videoWidth * 0.2} 0.3 0.02`);
+            const fwdText = document.createElement('a-text');
+            fwdText.setAttribute('value','>>');
+            fwdText.setAttribute('align','center');
+            fwdText.setAttribute('color','#ffffff');
+            fwdText.setAttribute('position','0 0 0.01');
+            // Aumentar tamaño del texto: usar scale para agrandar visualmente
+            fwdText.setAttribute('width','1.0');
+            fwdText.setAttribute('scale','3.0 3.0 3.0');
+            btnForward.appendChild(fwdText);
+            // Mostrar duración total al lado del icono >> (se actualizará en updateUI)
+            const fwdTime = document.createElement('a-text');
+            fwdTime.setAttribute('id', 'karaoke-forward-duration');
+            fwdTime.setAttribute('value', '0:00');
+            fwdTime.setAttribute('align', 'left');
+            fwdTime.setAttribute('color', '#ffffff');
+            fwdTime.setAttribute('width', '1.4');
+            // posicionarlo a la derecha del botón
+            fwdTime.setAttribute('position', '3.65 0 0.01');
+            fwdTime.setAttribute('scale', '6.0 6.0 6.0'); // escalar para mayor legibilidad
+            btnForward.appendChild(fwdTime);
 
             // agregar todos como hijos
             controls.appendChild(progressBg);
@@ -403,17 +434,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 return `${m}:${s}`;
             };
 
+            // flag para evitar que updateUI mueva el thumb mientras el usuario está arrastrando
+            let isDragging = false;
+
             const updateUI = () => {
                 const current = video.currentTime || 0;
                 const duration = video.duration || 0;
                 try { timeElapsed.setAttribute('value', formatTime(current)); } catch(e){}
                 try { timeTotal.setAttribute('value', formatTime(duration)); } catch(e){}
+                // actualizar también la duración mostrada junto al botón Forward (si existe)
+                try { if (typeof fwdTime !== 'undefined') fwdTime.setAttribute('value', formatTime(duration)); } catch(e){}
 
                 const lineW = parseFloat(progressLine.getAttribute('width')) || (this.data.videoWidth * 0.9);
                 const half = lineW / 2;
                 const ratio = duration ? Math.max(0, Math.min(1, current / duration)) : 0;
                 const x = -half + ratio * lineW;
-                try { thumb.setAttribute('position', `${x} -0.1 0.02`); } catch(e){}
+                // sólo mover el thumb automáticamente si no se está arrastrando
+                if (!isDragging) {
+                    try { thumb.setAttribute('position', `${x} -0.1 0.02`); } catch(e){}
+                }
             };
 
             // Eventos del video
@@ -441,6 +480,80 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (!isNaN(seekTime)) video.currentTime = seekTime;
                 } catch (err) { console.error('Error al seekear desde controles del componente:', err); }
             });
+
+            // === Drag-to-seek: permitir arrastrar el thumb para seekear ===
+            try {
+                const self = this;
+                const three = (AFRAME && AFRAME.THREE) ? AFRAME.THREE : window.THREE;
+                const rr = three ? new three.Raycaster() : null;
+
+                const pointerToRatio = (clientX, clientY) => {
+                    try {
+                        const sceneEl = self.el.sceneEl;
+                        if (!sceneEl || !sceneEl.camera || !sceneEl.canvas || !rr) return null;
+                        const rect = sceneEl.canvas.getBoundingClientRect();
+                        const x = ((clientX - rect.left) / rect.width) * 2 - 1;
+                        const y = -((clientY - rect.top) / rect.height) * 2 + 1;
+                        rr.setFromCamera({ x, y }, sceneEl.camera);
+                        const intersects = rr.intersectObject(progressLine.object3D, true);
+                        if (intersects && intersects.length > 0) {
+                            const p = intersects[0].point.clone();
+                            progressLine.object3D.worldToLocal(p);
+                            const lineWidth = parseFloat(progressLine.getAttribute('width')) || (self.data.videoWidth * 0.9);
+                            const half = lineWidth / 2;
+                            const ratio = Math.max(0, Math.min(1, (p.x + half) / lineWidth));
+                            return ratio;
+                        }
+                    } catch (e) { /* ignore */ }
+                    return null;
+                };
+
+                const onPointerMove = (ev) => {
+                    ev.preventDefault && ev.preventDefault();
+                    let clientX, clientY;
+                    if (ev.touches && ev.touches.length) {
+                        clientX = ev.touches[0].clientX; clientY = ev.touches[0].clientY;
+                    } else {
+                        clientX = ev.clientX; clientY = ev.clientY;
+                    }
+                    const r = pointerToRatio(clientX, clientY);
+                    if (r === null) return;
+                    const t = (video.duration || 0) * r;
+                    if (!isNaN(t)) {
+                        try { video.currentTime = t; } catch(e){}
+                        updateUI();
+                    }
+                };
+
+                const stopDrag = (ev) => {
+                    isDragging = false;
+                    document.removeEventListener('mousemove', onPointerMove);
+                    document.removeEventListener('touchmove', onPointerMove);
+                    document.removeEventListener('mouseup', stopDrag);
+                    document.removeEventListener('touchend', stopDrag);
+                };
+
+                const startDrag = (ev) => {
+                    ev && ev.preventDefault && ev.preventDefault();
+                    isDragging = true;
+                    // mover inmediatamente al punto de inicio para mayor responsividad
+                    if (ev.touches && ev.touches.length) onPointerMove(ev);
+                    else if (ev.clientX !== undefined) onPointerMove(ev);
+                    document.addEventListener('mousemove', onPointerMove, { passive: false });
+                    document.addEventListener('touchmove', onPointerMove, { passive: false });
+                    document.addEventListener('mouseup', stopDrag);
+                    document.addEventListener('touchend', stopDrag);
+                };
+
+                // Listeners en el thumb
+                thumb.addEventListener('mousedown', startDrag);
+                thumb.addEventListener('touchstart', startDrag, { passive: false });
+                // Soporte para eventos de controladores VR (trigger/grip)
+                ['triggerdown', 'gripdown', 'abuttondown', 'xbuttondown'].forEach((evName) => thumb.addEventListener(evName, startDrag));
+                ['triggerup', 'gripup', 'abuttonup', 'xbuttonup'].forEach((evName) => thumb.addEventListener(evName, stopDrag));
+            } catch (e) {
+                console.warn('Drag-to-seek no disponible (raycaster o escena faltante):', e);
+            }
 
             // comenzar precarga del video para que metadata esté disponible
             try { video.load(); } catch(e) {}
