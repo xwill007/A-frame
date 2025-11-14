@@ -3,9 +3,9 @@
 (function(){
     const c = {
         // primary accent (e.g., Play button)
-        primary: '#2200ff',
+        primary: '#060137',
         // button used for list items
-        button: '#6c28e9',
+        button: '#0008ff',
         // background panels
         background: '#454545',
         // main text color
@@ -17,7 +17,7 @@
         // thumb color
         thumb: '#ffffff',
         // secondary control button color (back/forward)
-        controlBtn: '#0008ffff',
+        controlBtn: '#0008ff',
         // evaluate/danger color
         danger: '#ee0101'
     };
