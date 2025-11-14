@@ -95,9 +95,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 const activateSelection = (evt) => {
                     // Evitar manejos duplicados si un evento fue prevenido
                     if (evt && evt.defaultPrevented) return;
-                    console.log(`Seleccionado: ${fileName} - ${artistName}`, evt && evt.type);
-                    // Pasar metadata (nombre y artista) a loadVideo para que el botón EVALUATE pueda usarla
-                    this.loadVideo(`./videos/karaoke/${fileName}`, { fileName, artistName });
+                    console.log(`Cancion Seleccionada: ${fileName} - ${artistName}`, evt && evt.type);
+                    // Pasar metadata (nombre y artista) a loadVideo y activar countdown antes de play
+                    // Solo para selecciones desde la lista queremos el countdown
+                    try {
+                        this.loadVideo(`./videos/karaoke/${fileName}`, { fileName, artistName }, { countdown: true });
+                    } catch (e) {
+                        // fallback sin opciones
+                        this.loadVideo(`./videos/karaoke/${fileName}`, { fileName, artistName });
+                    }
                 };
 
                 // Añadir listeners para varios tipos de entrada: mouse, touch, y eventos típicos de controles VR/hand
@@ -137,6 +143,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Configurar raycasting manual para clicks del mouse/touch si no hay cursor con rayOrigin: mouse
             const setupPointerRaycast = () => {
+                console.log('setting up pointer raycast for karaoke-vr');
                 const sceneEl = this.el.sceneEl;
                 if (!sceneEl || !sceneEl.camera) return;
 
@@ -161,6 +168,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             }
                         });
                     });
+                    console.log('buildMeshMap: mapped', meshList.length, 'meshes for', (this._karaokeButtons||[]).length, 'elements');
                     return { meshList, meshToEl };
                 };
 
@@ -185,6 +193,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
 
                     const ndc = getPointerNDC(clientX, clientY);
+                    // raycaster set from camera using normalized device coordinates
+                    console.log('handlePointer: NDC', ndc);
                     raycaster.setFromCamera(ndc, sceneEl.camera);
 
                     // refrescar mapa si necesario
@@ -194,6 +204,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (intersects && intersects.length > 0) {
                         const mesh = intersects[0].object;
                         const btnEl = meshData.meshToEl.get(mesh);
+                        console.log('handlePointer: intersects length', intersects.length, 'mesh', mesh && mesh.name, 'mappedEl', btnEl && (btnEl.id || btnEl.className || btnEl.tagName));
                         if (btnEl) {
                             // Preferir llamar a la función guardada en el elemento (si existe)
                             if (typeof btnEl._activateSelection === 'function') {
@@ -203,7 +214,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 try { btnEl.dispatchEvent(new Event('click', { bubbles: true, cancelable: true })); } catch (err) { console.warn('Error al despachar click:', err); }
                             }
                             // evitar que el evento nativo propague si corresponde
-                            ev.preventDefault();
+                            try { ev.preventDefault(); } catch(e){}
                         }
                     }
                 };
@@ -229,7 +240,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         },
 
-        loadVideo: function (videoPath, meta) {
+        loadVideo: function (videoPath, meta, options) {
             console.log(`Cargando video: ${videoPath}`);
 
             // Guardar metadata de la canción actual si se provee
@@ -281,6 +292,100 @@ document.addEventListener('DOMContentLoaded', function() {
             aVideoEl.setAttribute('position', this.data.videoPosition);
             this.el.appendChild(aVideoEl);
             this._aVideo = aVideoEl;
+
+            // Si se solicita countdown, crear un overlay de texto grande en el centro del video
+                try {
+                    const opts = options || {};
+                    const countdownRequested = !!opts.countdown;
+                    if (countdownRequested) {
+                        console.log('Countdown solicitado para:', videoPath);
+                        const countdownEl = document.createElement('a-text');
+                        countdownEl.setAttribute('id', 'karaoke-countdown');
+                        countdownEl.setAttribute('value', '');
+                        countdownEl.setAttribute('align', 'center');
+                        countdownEl.setAttribute('color', '#ffffff');
+                        // ancho del texto basado en ancho del video para escalar correctamente
+                        try { countdownEl.setAttribute('width', (this.data.videoWidth * 0.8).toString()); } catch(e){}
+                        // colocarlo justo frente al video
+                        countdownEl.setAttribute('position', '0 0 0.06');
+                        // hacer grande
+                        countdownEl.setAttribute('scale', '6 6 6');
+                        // visibilidad inicial
+                        countdownEl.setAttribute('visible', 'false');
+                        aVideoEl.appendChild(countdownEl);
+
+                        // Ejecutar cuenta regresiva 3..2..1 y al llegar a 0 iniciar reproducción
+                        let sec = 3;
+                        try { countdownEl.setAttribute('visible', 'true'); countdownEl.setAttribute('value', sec.toString()); } catch(e){}
+                        const intervalId = setInterval(() => {
+                            try {
+                                sec -= 1;
+                                console.log('countdown tick:', sec);
+                                if (sec > 0) {
+                                    countdownEl.setAttribute('value', sec.toString());
+                                } else {
+                                    // eliminar overlay y arrancar reproducción
+                                    clearInterval(intervalId);
+                                    try { if (countdownEl.parentNode) countdownEl.parentNode.removeChild(countdownEl); } catch(e){}
+                                    try {
+                                        // Intentar autoplay SIN silenciar primero. Si falla, hacer fallback a autoplay silenciado.
+                                        console.log('Intentando autoplay sin silenciar tras countdown');
+                                        const doUnmutedThenFallback = () => {
+                                            // primer intento: sin mutear
+                                            htmlVideo.muted = false;
+                                            const tryUnmuted = () => {
+                                                htmlVideo.play().then(() => {
+                                                    console.log('Autoplay NO-silenciado iniciado tras countdown.');
+                                                }).catch((err) => {
+                                                    console.warn('Autoplay sin silenciar falló, intentando fallback silenciado:', err);
+                                                    // fallback: intentar autoplay silenciado
+                                                    try {
+                                                        htmlVideo.muted = true;
+                                                        this._autoplayMuted = true;
+                                                        const tryMuted = () => {
+                                                            htmlVideo.play().then(() => {
+                                                                console.log('Autoplay silenciado iniciado tras fallback.');
+                                                            }).catch((err2) => {
+                                                                console.warn('No se pudo autoplay ni sin silenciar ni silenciado:', err2);
+                                                                try {
+                                                                    // Mostrar hint visual
+                                                                    if (!aVideoEl.querySelector('#karaoke-autoplay-hint')) {
+                                                                        const hintEl = document.createElement('a-text');
+                                                                        hintEl.setAttribute('id', 'karaoke-autoplay-hint');
+                                                                        hintEl.setAttribute('value', 'Click Play to start');
+                                                                        hintEl.setAttribute('align', 'center');
+                                                                        hintEl.setAttribute('color', '#ffffff');
+                                                                        try { hintEl.setAttribute('width', (this.data.videoWidth * 0.6).toString()); } catch(e){}
+                                                                        hintEl.setAttribute('position', '0 -0.5 0.06');
+                                                                        hintEl.setAttribute('scale', '2 2 2');
+                                                                        aVideoEl.appendChild(hintEl);
+                                                                        this._autoplayHintEl = hintEl;
+                                                                        setTimeout(() => {
+                                                                            try { if (this._autoplayHintEl && this._autoplayHintEl.parentNode) this._autoplayHintEl.parentNode.removeChild(this._autoplayHintEl); } catch(e){}
+                                                                            this._autoplayHintEl = null;
+                                                                        }, 10000);
+                                                                    }
+                                                                } catch (e) { console.warn('Error mostrando autoplay hint:', e); }
+                                                            });
+                                                        };
+                                                        if (htmlVideo.readyState >= 2) tryMuted(); else htmlVideo.addEventListener('canplay', tryMuted, { once: true });
+                                                    } catch (e) { console.warn('Error during muted fallback:', e); }
+                                                });
+                                            };
+                                            if (htmlVideo.readyState >= 2) {
+                                                tryUnmuted();
+                                            } else {
+                                                htmlVideo.addEventListener('canplay', tryUnmuted, { once: true });
+                                                try { htmlVideo.load(); } catch(e){}
+                                            }
+                                        };
+                                        doUnmutedThenFallback();
+                                    } catch (err) { console.warn('Error al iniciar play tras countdown:', err); }
+                                }
+                            } catch (e) { clearInterval(intervalId); }
+                        }, 1000);
+                    }
+            } catch (e) { console.warn('Error creando overlay de countdown:', e); }
 
             // ---- Crear controles como hijos del componente, posicionados debajo del video ----
             // calcular posición relativa basada en videoPosition y videoHeight
@@ -434,6 +539,34 @@ document.addEventListener('DOMContentLoaded', function() {
             this.el.appendChild(controls);
             this._controlsEntity = controls;
 
+            // Forzar reconstrucción del mapa de meshes para el raycast manual
+            try {
+                this.el.dispatchEvent(new Event('object3dset'));
+                console.log('karaoke-vr: forced object3dset to rebuild mesh map after creating controls');
+            } catch (e) { /* ignore */ }
+
+            // Registrar controles para que el raycast manual (mouse) los detecte igual que el botón Evaluate
+            try {
+                if (!this._karaokeButtons) this._karaokeButtons = [];
+                const controlsToRegister = [progressLine, thumb, btnBack, btnPlay, btnForward, elapsedBtn];
+                controlsToRegister.forEach((el) => {
+                    try {
+                        // añadir si no existe ya
+                        if (this._karaokeButtons.indexOf(el) === -1) this._karaokeButtons.push(el);
+                        // Exponer activador que dispara un click en el elemento para reutilizar la lógica existente
+                        el._activateSelection = (evt) => {
+                            try {
+                                // preferir disparar el mismo evento click que los listeners ya manejan
+                                el.dispatchEvent(new Event('click', { bubbles: true, cancelable: true }));
+                            } catch (e) { try { if (typeof el.click === 'function') el.click(); } catch(e){} }
+                        };
+                    } catch (e) { /* ignore individual failures */ }
+                });
+                console.log('karaoke-vr: registered controls for manual raycast:', controlsToRegister.map(x => x && (x.id || x.tagName)).join(', '));
+                // reconstruit mesh map
+                try { this.el.dispatchEvent(new Event('object3dset')); } catch(e){}
+            } catch (e) { console.warn('Error registrando controles para raycast manual:', e); }
+
             // ---- lógica de interacción con el HTMLVideoElement ----
             const video = htmlVideo;
 
@@ -474,7 +607,24 @@ document.addEventListener('DOMContentLoaded', function() {
             video.addEventListener('pause', () => { try { playText.setAttribute('value','Play'); } catch(e){} });
 
             // botones
-            btnPlay.addEventListener('click', () => { if (video.paused) video.play(); else video.pause(); });
+            btnPlay.addEventListener('click', () => {
+                try {
+                    if (video.paused) {
+                        // si mostramos un hint de autoplay, eliminarlo cuando el usuario pulse Play
+                        try { if (this._autoplayHintEl && this._autoplayHintEl.parentNode) this._autoplayHintEl.parentNode.removeChild(this._autoplayHintEl); } catch(e){}
+                        this._autoplayHintEl = null;
+                        // si hicimos autoplay silenciado antes, desmutear al primer play manual del usuario
+                        if (this._autoplayMuted) {
+                            try { video.muted = false; } catch(e){}
+                            this._autoplayMuted = false;
+                            console.log('Usuario activó reproducción: desmuteando video');
+                        }
+                        video.play();
+                    } else {
+                        video.pause();
+                    }
+                } catch (e) { console.warn('Error en btnPlay click:', e); }
+            });
             btnBack.addEventListener('click', () => { video.currentTime = Math.max(0, (video.currentTime || 0) - 10); });
             btnForward.addEventListener('click', () => {
                 try {
@@ -679,6 +829,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!this._karaokeButtons) this._karaokeButtons = [];
                 this._karaokeButtons.push(evalBtn);
                 evalBtn._activateSelection = onEvaluate;
+                // Forzar reconstrucción del mapa de meshes tras añadir el botón de evaluación
+                try {
+                    this.el.dispatchEvent(new Event('object3dset'));
+                    console.log('karaoke-vr: forced object3dset to rebuild mesh map after adding evaluate button');
+                } catch (e) { /* ignore */ }
             } catch (e) {
                 console.warn('No se pudo crear el botón EVALUATE SONG:', e);
             }
