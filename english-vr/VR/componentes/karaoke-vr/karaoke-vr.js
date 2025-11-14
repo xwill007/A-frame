@@ -173,6 +173,75 @@ document.addEventListener('DOMContentLoaded', function() {
                 };
 
                 let meshData = buildMeshMap();
+                // referencia al componente para closures
+                const self = this;
+                // hovered element para mousemove
+                this._lastHovered = null;
+
+                const getScaleArr = (el) => {
+                    try {
+                        const s = el.getAttribute('scale');
+                        if (!s) return [1,1,1];
+                        if (typeof s === 'string') return s.split(' ').map((v) => parseFloat(v) || 0);
+                        if (Array.isArray(s)) return s.map((v) => parseFloat(v) || 0);
+                        if (s.x !== undefined) return [s.x, s.y, s.z];
+                    } catch(e) {}
+                    return [1,1,1];
+                };
+
+                const applyHover = (el) => {
+                    try {
+                        if (!el) return;
+                        if (!el._originalScale) {
+                            const orig = el.getAttribute('scale');
+                            el._originalScale = (typeof orig === 'string' && orig) ? orig : (Array.isArray(orig) ? orig.join(' ') : '1 1 1');
+                        }
+                        const sc = getScaleArr(el);
+                        const scaled = sc.map((v) => (v || 1) * 1.20);
+                        el.setAttribute('scale', `${scaled[0]} ${scaled[1]} ${scaled[2]}`);
+                    } catch(e) { /* ignore */ }
+                };
+
+                const clearHover = (el) => {
+                    try {
+                        if (!el) return;
+                        if (el._originalScale) {
+                            el.setAttribute('scale', el._originalScale);
+                            delete el._originalScale;
+                        } else {
+                            el.setAttribute('scale', '1 1 1');
+                        }
+                    } catch(e) { /* ignore */ }
+                };
+
+                const handleHover = (ev) => {
+                    try {
+                        let clientX, clientY;
+                        if (ev.touches && ev.touches.length) {
+                            clientX = ev.touches[0].clientX; clientY = ev.touches[0].clientY;
+                        } else {
+                            clientX = ev.clientX; clientY = ev.clientY;
+                        }
+                        const ndc = getPointerNDC(clientX, clientY);
+                        raycaster.setFromCamera(ndc, sceneEl.camera);
+                        if (!meshData || meshData.meshList.length === 0) meshData = buildMeshMap();
+                        const intersects = raycaster.intersectObjects(meshData.meshList, true);
+                        if (intersects && intersects.length > 0) {
+                            const mesh = intersects[0].object;
+                            const btnEl = meshData.meshToEl.get(mesh);
+                            if (btnEl && btnEl !== this._lastHovered) {
+                                // nuevo hover
+                                try { clearHover(this._lastHovered); } catch(e){}
+                                this._lastHovered = btnEl;
+                                try { applyHover(btnEl); } catch(e){}
+                            }
+                        } else {
+                            // no intersect -> limpiar hover
+                            try { clearHover(this._lastHovered); } catch(e){}
+                            this._lastHovered = null;
+                        }
+                    } catch (e) { /* ignore hover errors */ }
+                };
 
                 const getPointerNDC = (clientX, clientY) => {
                     const rect = canvas.getBoundingClientRect();
@@ -207,11 +276,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         console.log('handlePointer: intersects length', intersects.length, 'mesh', mesh && mesh.name, 'mappedEl', btnEl && (btnEl.id || btnEl.className || btnEl.tagName));
                         if (btnEl) {
                             // Preferir llamar a la función guardada en el elemento (si existe)
+                            const intersection = intersects[0];
                             if (typeof btnEl._activateSelection === 'function') {
-                                try { btnEl._activateSelection({ type: 'pointerdown', defaultPrevented: false }); } catch (err) { console.warn('Error al ejecutar _activateSelection:', err); }
+                                try { btnEl._activateSelection({ type: 'pointerdown', defaultPrevented: false, detail: { intersection } }); } catch (err) { console.warn('Error al ejecutar _activateSelection:', err); }
                             } else {
-                                // Como fallback, despachar un evento 'click' para activar los listeners existentes
-                                try { btnEl.dispatchEvent(new Event('click', { bubbles: true, cancelable: true })); } catch (err) { console.warn('Error al despachar click:', err); }
+                                // Como fallback, despachar un CustomEvent 'click' incluyendo la intersection
+                                try { btnEl.dispatchEvent(new CustomEvent('click', { bubbles: true, cancelable: true, detail: { intersection } })); } catch (err) { console.warn('Error al despachar click:', err); }
                             }
                             // evitar que el evento nativo propague si corresponde
                             try { ev.preventDefault(); } catch(e){}
@@ -222,6 +292,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Añadir listeners al canvas
                 canvas.addEventListener('mousedown', handlePointer, { passive: false });
                 canvas.addEventListener('touchstart', handlePointer, { passive: false });
+                // hover por mouse
+                canvas.addEventListener('mousemove', handleHover, { passive: true });
+                canvas.addEventListener('touchmove', handleHover, { passive: true });
 
                 // Reconstruir mesh map cuando cambie la geometría (por si hay re-render)
                 this.el.addEventListener('object3dset', () => { meshData = buildMeshMap(); });
@@ -554,10 +627,15 @@ document.addEventListener('DOMContentLoaded', function() {
                         // añadir si no existe ya
                         if (this._karaokeButtons.indexOf(el) === -1) this._karaokeButtons.push(el);
                         // Exponer activador que dispara un click en el elemento para reutilizar la lógica existente
+                        // Si se recibe detail.intersection, se reenvía dentro de un CustomEvent para que handlers como progressLine puedan usarlo
                         el._activateSelection = (evt) => {
                             try {
-                                // preferir disparar el mismo evento click que los listeners ya manejan
-                                el.dispatchEvent(new Event('click', { bubbles: true, cancelable: true }));
+                                const intersection = evt && evt.detail && evt.detail.intersection;
+                                if (intersection) {
+                                    el.dispatchEvent(new CustomEvent('click', { bubbles: true, cancelable: true, detail: { intersection } }));
+                                } else {
+                                    el.dispatchEvent(new Event('click', { bubbles: true, cancelable: true }));
+                                }
                             } catch (e) { try { if (typeof el.click === 'function') el.click(); } catch(e){} }
                         };
                     } catch (e) { /* ignore individual failures */ }
