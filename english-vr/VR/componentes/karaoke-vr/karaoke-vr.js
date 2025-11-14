@@ -1,6 +1,19 @@
 // Funcionalidad del karaoke VR
+
+// Control de logs: usar Logs(true|false) para activar/desactivar
+var showLogs = true; // cambiar a false para silenciar logs por defecto
+function Logs(val) {
+    if (typeof val === 'boolean') showLogs = val;
+    else showLogs = !showLogs;
+    // Mensaje de estado siempre visible para confirmar el cambio
+    console.log('karaoke-vr: logs ' + (showLogs ? 'enabled' : 'disabled'));
+}
+function L() { if (showLogs) console.log.apply(console, arguments); }
+function W() { if (showLogs) console.warn.apply(console, arguments); }
+function E() { if (showLogs) console.error.apply(console, arguments); }
+
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Karaoke VR cargado');
+    L('Karaoke VR cargado');
 
     // Componente karaoke-vr.js
     // Requiere aframe-htmlembed-component para mostrar iframes de YouTube
@@ -18,21 +31,39 @@ document.addEventListener('DOMContentLoaded', function() {
             listPosition: { type: 'string', default: '6 2.5 -3' }
         },
         init: function () {
-            console.log('Inicializando componente karaoke-vr');
+            L('Inicializando componente karaoke-vr');
 
-            // Normalizar colores (quitar posible canal alfa de 8 dígitos)
-            const buttonColor = (this.data.buttonColor || '#4CAF50').slice(0, 7);
-            const backgroundColor = (this.data.backgroundColor || '#454545').slice(0, 7);
-            const textColor = (this.data.textColor || '#FFFFFF').slice(0, 7);
+            // Preferir colores globales si existen (window.karaokeColors)
+            const globalColors = (typeof window !== 'undefined' && window.karaokeColors) ? window.karaokeColors : {};
+
+            // Normalizar colores (quitar posible canal alfa de 8 dígitos), fuente: globalColors -> this.data
+            const buttonColorRaw = globalColors.button || this.data.buttonColor || '#4CAF50';
+            const backgroundColorRaw = globalColors.background || this.data.backgroundColor || '#454545';
+            const textColorRaw = globalColors.text || this.data.textColor || '#FFFFFF';
+
+            const buttonColor = ('' + buttonColorRaw).slice(0, 7);
+            const backgroundColor = ('' + backgroundColorRaw).slice(0, 7);
+            const textColor = ('' + textColorRaw).slice(0, 7);
+
+            // Otros colores del palette (opcionalmente definidos en window.karaokeColors)
+            const palette = {
+                primary: (globalColors.primary || '#121093').slice(0,7),
+                controlBg: (globalColors.controlBg || '#101010').slice(0,7),
+                progressLine: (globalColors.progressLine || '#bbbbbb').slice(0,7),
+                thumb: (globalColors.thumb || '#ffffff').slice(0,7),
+                controlBtn: (globalColors.controlBtn || '#333333').slice(0,7),
+                danger: (globalColors.danger || '#d21919').slice(0,7)
+            };
 
             // guardar colores normalizados en la instancia para uso desde otros métodos
             this._textColor = textColor;
             this._buttonColor = buttonColor;
             this._backgroundColor = backgroundColor;
+            this._palette = palette;
 
-            console.log('Color del botón (normalizado):', buttonColor);
-            console.log('Color del fondo (normalizado):', backgroundColor);
-            console.log('Color del texto (normalizado):', textColor);
+            L('Color del botón (normalizado):', buttonColor);
+            L('Color del fondo (normalizado):', backgroundColor);
+            L('Color del texto (normalizado):', textColor);
 
             // Crear contenedor para la lista de videos
             const videoListContainer = document.createElement('a-entity');
@@ -44,7 +75,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const backgroundHeight = buttonCount * 0.8 + 1.0; // Altura ajustada para incluir el título
             background.setAttribute('width', 4); // Ajustar el ancho del fondo
             background.setAttribute('height', backgroundHeight); // Ajustar la altura del fondo
-            background.setAttribute('color', backgroundColor);
+            background.setAttribute('color', this._backgroundColor);
             background.setAttribute('position', `0 ${-backgroundHeight / 2 + 0.4} -0.01`); // Centrar el fondo respecto a los botones
 
             // Agregar título dentro del fondo
@@ -71,7 +102,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const button = document.createElement('a-plane');
                 button.setAttribute('width', 3); // Ajustar el ancho del cuadro
                 button.setAttribute('height', 0.7); // Ajustar la altura del cuadro
-                button.setAttribute('color', buttonColor);
+                button.setAttribute('color', this._buttonColor);
                 button.setAttribute('position', `0 ${-index * 0.8 - 0.5} 0`); // Ajustar posición para dar espacio al título
                 button.setAttribute('class', 'clickable');
 
@@ -103,7 +134,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const activateSelection = (evt) => {
                     // Evitar manejos duplicados si un evento fue prevenido
                     if (evt && evt.defaultPrevented) return;
-                    console.log(`Cancion Seleccionada: ${fileName} - ${artistName}`, evt && evt.type);
+                    L(`Cancion Seleccionada: ${fileName} - ${artistName}`, evt && evt.type);
                     // Pasar metadata (nombre y artista) a loadVideo y activar countdown antes de play
                     // Solo para selecciones desde la lista queremos el countdown
                     try {
@@ -151,7 +182,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Configurar raycasting manual para clicks del mouse/touch si no hay cursor con rayOrigin: mouse
             const setupPointerRaycast = () => {
-                console.log('setting up pointer raycast for karaoke-vr');
+                L('setting up pointer raycast for karaoke-vr');
                 const sceneEl = this.el.sceneEl;
                 if (!sceneEl || !sceneEl.camera) return;
 
@@ -176,7 +207,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             }
                         });
                     });
-                    console.log('buildMeshMap: mapped', meshList.length, 'meshes for', (this._karaokeButtons||[]).length, 'elements');
+                    L('buildMeshMap: mapped', meshList.length, 'meshes for', (this._karaokeButtons||[]).length, 'elements');
                     return { meshList, meshToEl };
                 };
 
@@ -271,7 +302,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                     const ndc = getPointerNDC(clientX, clientY);
                     // raycaster set from camera using normalized device coordinates
-                    console.log('handlePointer: NDC', ndc);
+                    L('handlePointer: NDC', ndc);
                     raycaster.setFromCamera(ndc, sceneEl.camera);
 
                     // refrescar mapa si necesario
@@ -281,15 +312,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (intersects && intersects.length > 0) {
                         const mesh = intersects[0].object;
                         const btnEl = meshData.meshToEl.get(mesh);
-                        console.log('handlePointer: intersects length', intersects.length, 'mesh', mesh && mesh.name, 'mappedEl', btnEl && (btnEl.id || btnEl.className || btnEl.tagName));
+                        L('handlePointer: intersects length', intersects.length, 'mesh', mesh && mesh.name, 'mappedEl', btnEl && (btnEl.id || btnEl.className || btnEl.tagName));
                         if (btnEl) {
                             // Preferir llamar a la función guardada en el elemento (si existe)
                             const intersection = intersects[0];
                             if (typeof btnEl._activateSelection === 'function') {
-                                try { btnEl._activateSelection({ type: 'pointerdown', defaultPrevented: false, detail: { intersection } }); } catch (err) { console.warn('Error al ejecutar _activateSelection:', err); }
+                                try { btnEl._activateSelection({ type: 'pointerdown', defaultPrevented: false, detail: { intersection } }); } catch (err) { W('Error al ejecutar _activateSelection:', err); }
                             } else {
                                 // Como fallback, despachar un CustomEvent 'click' incluyendo la intersection
-                                try { btnEl.dispatchEvent(new CustomEvent('click', { bubbles: true, cancelable: true, detail: { intersection } })); } catch (err) { console.warn('Error al despachar click:', err); }
+                                try { btnEl.dispatchEvent(new CustomEvent('click', { bubbles: true, cancelable: true, detail: { intersection } })); } catch (err) { W('Error al despachar click:', err); }
                             }
                             // evitar que el evento nativo propague si corresponde
                             try { ev.preventDefault(); } catch(e){}
@@ -322,7 +353,7 @@ document.addEventListener('DOMContentLoaded', function() {
         },
 
         loadVideo: function (videoPath, meta, options) {
-            console.log(`Cargando video: ${videoPath}`);
+            L(`Cargando video: ${videoPath}`);
 
             // Guardar metadata de la canción actual si se provee
             const fileName = (meta && meta.fileName) ? meta.fileName : null;
@@ -379,7 +410,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const opts = options || {};
                     const countdownRequested = !!opts.countdown;
                     if (countdownRequested) {
-                        console.log('Countdown solicitado para:', videoPath);
+                        L('Countdown solicitado para:', videoPath);
                         const countdownEl = document.createElement('a-text');
                         countdownEl.setAttribute('id', 'karaoke-countdown');
                         countdownEl.setAttribute('value', '');
@@ -401,7 +432,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         const intervalId = setInterval(() => {
                             try {
                                 sec -= 1;
-                                console.log('countdown tick:', sec);
+                                L('countdown tick:', sec);
                                 if (sec > 0) {
                                     countdownEl.setAttribute('value', sec.toString());
                                 } else {
@@ -410,24 +441,24 @@ document.addEventListener('DOMContentLoaded', function() {
                                     try { if (countdownEl.parentNode) countdownEl.parentNode.removeChild(countdownEl); } catch(e){}
                                     try {
                                         // Intentar autoplay SIN silenciar primero. Si falla, hacer fallback a autoplay silenciado.
-                                        console.log('Intentando autoplay sin silenciar tras countdown');
+                                        L('Intentando autoplay sin silenciar tras countdown');
                                         const doUnmutedThenFallback = () => {
                                             // primer intento: sin mutear
                                             htmlVideo.muted = false;
                                             const tryUnmuted = () => {
                                                 htmlVideo.play().then(() => {
-                                                    console.log('Autoplay NO-silenciado iniciado tras countdown.');
+                                                    L('Autoplay NO-silenciado iniciado tras countdown.');
                                                 }).catch((err) => {
-                                                    console.warn('Autoplay sin silenciar falló, intentando fallback silenciado:', err);
+                                                    W('Autoplay sin silenciar falló, intentando fallback silenciado:', err);
                                                     // fallback: intentar autoplay silenciado
                                                     try {
                                                         htmlVideo.muted = true;
                                                         this._autoplayMuted = true;
                                                         const tryMuted = () => {
                                                             htmlVideo.play().then(() => {
-                                                                console.log('Autoplay silenciado iniciado tras fallback.');
+                                                                L('Autoplay silenciado iniciado tras fallback.');
                                                             }).catch((err2) => {
-                                                                console.warn('No se pudo autoplay ni sin silenciar ni silenciado:', err2);
+                                                                W('No se pudo autoplay ni sin silenciar ni silenciado:', err2);
                                                                 try {
                                                                     // Mostrar hint visual
                                                                     if (!aVideoEl.querySelector('#karaoke-autoplay-hint')) {
@@ -446,11 +477,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                                                             this._autoplayHintEl = null;
                                                                         }, 10000);
                                                                     }
-                                                                } catch (e) { console.warn('Error mostrando autoplay hint:', e); }
+                                                                } catch (e) { W('Error mostrando autoplay hint:', e); }
                                                             });
                                                         };
                                                         if (htmlVideo.readyState >= 2) tryMuted(); else htmlVideo.addEventListener('canplay', tryMuted, { once: true });
-                                                    } catch (e) { console.warn('Error during muted fallback:', e); }
+                                                    } catch (e) { W('Error during muted fallback:', e); }
                                                 });
                                             };
                                             if (htmlVideo.readyState >= 2) {
@@ -461,12 +492,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                             }
                                         };
                                         doUnmutedThenFallback();
-                                    } catch (err) { console.warn('Error al iniciar play tras countdown:', err); }
+                                    } catch (err) { W('Error al iniciar play tras countdown:', err); }
                                 }
                             } catch (e) { clearInterval(intervalId); }
                         }, 1000);
                     }
-            } catch (e) { console.warn('Error creando overlay de countdown:', e); }
+            } catch (e) { W('Error creando overlay de countdown:', e); }
 
             // ---- Crear controles como hijos del componente, posicionados debajo del video ----
             // calcular posición relativa basada en videoPosition y videoHeight
@@ -493,7 +524,7 @@ document.addEventListener('DOMContentLoaded', function() {
             progressBg.setAttribute('id', 'karaoke-progress-bg');
             progressBg.setAttribute('width', Math.max(1.8, this.data.videoWidth));
             progressBg.setAttribute('height', 1.0);
-            progressBg.setAttribute('color', '#101010');
+            progressBg.setAttribute('color', this._palette.controlBg || '#101010');
             progressBg.setAttribute('opacity', '0.6');
             progressBg.setAttribute('position', `0 -0.05 -0.02`);
 
@@ -502,14 +533,14 @@ document.addEventListener('DOMContentLoaded', function() {
             // hacer la linea ligeramente más angosta que el video para tener padding
             progressLine.setAttribute('width', (this.data.videoWidth * 0.9).toString());
             progressLine.setAttribute('height', 0.04);
-            progressLine.setAttribute('color', '#bbbbbb');
+            progressLine.setAttribute('color', this._palette.progressLine || '#bbbbbb');
             progressLine.setAttribute('position', `0 -0.1 0.01`);
             progressLine.setAttribute('class', 'clickable');
 
             const thumb = document.createElement('a-circle');
             thumb.setAttribute('id', 'karaoke-progress-thumb');
             thumb.setAttribute('radius', 0.09);
-            thumb.setAttribute('color', '#ffffff');
+            thumb.setAttribute('color', this._palette.thumb || '#ffffff');
             // posicion inicial a la izquierda
             const initialX = -(parseFloat(progressLine.getAttribute('width')) / 2) || -(this.data.videoWidth * 0.9 / 2);
             thumb.setAttribute('position', `${initialX} -0.1 0.02`);
@@ -525,7 +556,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // ancho y alto compactos para parecer botón
             elapsedBtn.setAttribute('width', 0.9);
             elapsedBtn.setAttribute('height', 0.32);
-            elapsedBtn.setAttribute('color', '#222222');
+            elapsedBtn.setAttribute('color', this._palette.controlBg || '#222222');
             elapsedBtn.setAttribute('class', 'clickable');
             // Posicionar al inicio (izquierda) de la barra, ligeramente por encima de la linea
             const elapsedX = -(this.data.videoWidth * 0.5) - 0.15;
@@ -550,7 +581,7 @@ document.addEventListener('DOMContentLoaded', function() {
             btnBack.setAttribute('class', 'clickable');
             // Aumentar tamaño para mantener proporción con el botón Play (ahora igual que Play)
             btnBack.setAttribute('radius', 0.2);
-            btnBack.setAttribute('color', '#333333');
+            btnBack.setAttribute('color', this._palette.controlBtn || '#333333');
             // Elevar Y para alinearlo con el botón Play más grande y separar X ligeramente
             btnBack.setAttribute('position', `-${this.data.videoWidth * 0.24} 0.3 0.02`);
             const backText = document.createElement('a-text');
@@ -568,7 +599,7 @@ document.addEventListener('DOMContentLoaded', function() {
             btnPlay.setAttribute('class', 'clickable');
             // Diámetro duplicado: radius aumentado de 0.1 -> 0.2
             btnPlay.setAttribute('radius', 0.4);
-            btnPlay.setAttribute('color', '#121093');
+            btnPlay.setAttribute('color', this._palette.controlBtn || '#121093');
             btnPlay.setAttribute('position', `0 0.3 0.02`);
             // Aumentar el ancho del texto para mayor legibilidad
             const playText = document.createElement('a-text');
@@ -585,7 +616,7 @@ document.addEventListener('DOMContentLoaded', function() {
             btnForward.setAttribute('class', 'clickable');
             // Aumentar tamaño para mantener proporción con el botón Play (ahora igual que Play)
             btnForward.setAttribute('radius', 0.2);
-            btnForward.setAttribute('color', '#333333');
+            btnForward.setAttribute('color', this._palette.controlBtn || '#333333');
             // Elevar Y para alinearlo con el botón Play más grande y separar X ligeramente
             btnForward.setAttribute('position', `${this.data.videoWidth * 0.24} 0.3 0.02`);
             const fwdText = document.createElement('a-text');
@@ -621,10 +652,10 @@ document.addEventListener('DOMContentLoaded', function() {
             this._controlsEntity = controls;
 
             // Forzar reconstrucción del mapa de meshes para el raycast manual
-            try {
-                this.el.dispatchEvent(new Event('object3dset'));
-                console.log('karaoke-vr: forced object3dset to rebuild mesh map after creating controls');
-            } catch (e) { /* ignore */ }
+                try {
+                    this.el.dispatchEvent(new Event('object3dset'));
+                    L('karaoke-vr: forced object3dset to rebuild mesh map after creating controls');
+                } catch (e) { /* ignore */ }
 
             // Registrar controles para que el raycast manual (mouse) los detecte igual que el botón Evaluate
             try {
@@ -648,10 +679,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         };
                     } catch (e) { /* ignore individual failures */ }
                 });
-                console.log('karaoke-vr: registered controls for manual raycast:', controlsToRegister.map(x => x && (x.id || x.tagName)).join(', '));
+                L('karaoke-vr: registered controls for manual raycast:', controlsToRegister.map(x => x && (x.id || x.tagName)).join(', '));
                 // reconstruit mesh map
                 try { this.el.dispatchEvent(new Event('object3dset')); } catch(e){}
-            } catch (e) { console.warn('Error registrando controles para raycast manual:', e); }
+                } catch (e) { W('Error registrando controles para raycast manual:', e); }
 
             // ---- lógica de interacción con el HTMLVideoElement ----
             const video = htmlVideo;
@@ -703,13 +734,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (this._autoplayMuted) {
                             try { video.muted = false; } catch(e){}
                             this._autoplayMuted = false;
-                            console.log('Usuario activó reproducción: desmuteando video');
+                            L('Usuario activó reproducción: desmuteando video');
                         }
                         video.play();
                     } else {
                         video.pause();
                     }
-                } catch (e) { console.warn('Error en btnPlay click:', e); }
+                } catch (e) { W('Error en btnPlay click:', e); }
             });
             btnBack.addEventListener('click', () => { video.currentTime = Math.max(0, (video.currentTime || 0) - 10); });
             btnForward.addEventListener('click', () => {
@@ -733,7 +764,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const ratio = Math.max(0, Math.min(1, (point.x + half) / lineWidth));
                     const seekTime = (video.duration || 0) * ratio;
                     if (!isNaN(seekTime)) video.currentTime = seekTime;
-                } catch (err) { console.error('Error al seekear desde controles del componente:', err); }
+                } catch (err) { E('Error al seekear desde controles del componente:', err); }
             });
 
             // === Drag-to-seek: permitir arrastrar el thumb para seekear ===
@@ -807,7 +838,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 ['triggerdown', 'gripdown', 'abuttondown', 'xbuttondown'].forEach((evName) => thumb.addEventListener(evName, startDrag));
                 ['triggerup', 'gripup', 'abuttonup', 'xbuttonup'].forEach((evName) => thumb.addEventListener(evName, stopDrag));
             } catch (e) {
-                console.warn('Drag-to-seek no disponible (raycaster o escena faltante):', e);
+                W('Drag-to-seek no disponible (raycaster o escena faltante):', e);
             }
 
             // comenzar precarga del video para que metadata esté disponible
@@ -845,7 +876,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 evalBtn.setAttribute('width', btnWidth + 1);
                 evalBtn.setAttribute('height', btnHeight);
                 // Usar color hex de 6 dígitos (A-Frame/three.js no siempre acepta 8 dígitos RGBA)
-                evalBtn.setAttribute('color', '#d21919');
+                evalBtn.setAttribute('color', this._palette.danger || '#d21919');
                 // Forzar material plano y doble cara para asegurar color sólido
                 try { evalBtn.setAttribute('material', 'shader: flat; side: double;'); } catch (e) {}
                 evalBtn.setAttribute('position', `${vx} ${btnY} ${vz}`);
@@ -879,14 +910,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     const leftCircle = document.createElement('a-circle');
                     leftCircle.setAttribute('radius', radius);
                     leftCircle.setAttribute('segments', 32);
-                    leftCircle.setAttribute('color', '#d21919');
+                    leftCircle.setAttribute('color', this._palette.danger || '#d21919');
                     leftCircle.setAttribute('position', `${-offsetX} 0 0.003`);
                     leftCircle.setAttribute('rotation', '0 0 0');
 
                     const rightCircle = document.createElement('a-circle');
                     rightCircle.setAttribute('radius', radius);
                     rightCircle.setAttribute('segments', 32);
-                    rightCircle.setAttribute('color', '#d21919');
+                    rightCircle.setAttribute('color', this._palette.danger || '#d21919');
                     rightCircle.setAttribute('position', `${offsetX} 0 0.003`);
                     rightCircle.setAttribute('rotation', '0 0 0');
 
@@ -918,10 +949,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Forzar reconstrucción del mapa de meshes tras añadir el botón de evaluación
                 try {
                     this.el.dispatchEvent(new Event('object3dset'));
-                    console.log('karaoke-vr: forced object3dset to rebuild mesh map after adding evaluate button');
+                    L('karaoke-vr: forced object3dset to rebuild mesh map after adding evaluate button');
                 } catch (e) { /* ignore */ }
-            } catch (e) {
-                console.warn('No se pudo crear el botón EVALUATE SONG:', e);
+                } catch (e) {
+                W('No se pudo crear el botón EVALUATE SONG:', e);
             }
         }
 
@@ -932,7 +963,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const current = this._currentSong || { path: videoPath, fileName: null, artist: null };
             const fileName = current.fileName || (videoPath ? videoPath.split('/').pop() : 'unknown');
             const artist = current.artist || 'Artista desconocido';
-            console.log('Evaluate song requested for:', videoPath, '-', fileName, '-', artist);
+            L('Evaluate song requested for:', videoPath, '-', fileName, '-', artist);
             try {
                 this.el.emit('evaluate-song', { path: videoPath, fileName: fileName, artist: artist });
             } catch (e) {
