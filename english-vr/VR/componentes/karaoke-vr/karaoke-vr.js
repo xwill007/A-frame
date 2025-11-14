@@ -12,19 +12,27 @@ document.addEventListener('DOMContentLoaded', function() {
             videoList: { type: 'string', default: 'GangstasParadise.mp4|Coolio,itsMyLife.mp4|Bon Jovi,StandByMe.mp4|Ben E. King' },
             textColor: { type: 'string', default: '#FFFFFF' },
             buttonColor: { type: 'string', default: '#4CAF50' },
-            backgroundColor: { type: 'string', default: '#454545ff' },
+            // Use 6-digit hex defaults to avoid THREE.Color warnings
+            backgroundColor: { type: 'string', default: '#454545' },
             videoPosition: { type: 'string', default: '0 2.5 3' },
             listPosition: { type: 'string', default: '6 2.5 -3' }
         },
         init: function () {
             console.log('Inicializando componente karaoke-vr');
 
-            // Eliminar canal alfa de los colores
-            const buttonColor = this.data.buttonColor.slice(0, 7);
-            const backgroundColor = this.data.backgroundColor.slice(0, 7);
+            // Normalizar colores (quitar posible canal alfa de 8 dígitos)
+            const buttonColor = (this.data.buttonColor || '#4CAF50').slice(0, 7);
+            const backgroundColor = (this.data.backgroundColor || '#454545').slice(0, 7);
+            const textColor = (this.data.textColor || '#FFFFFF').slice(0, 7);
 
-            console.log('Color del botón (sin alfa):', buttonColor);
-            console.log('Color del fondo (sin alfa):', backgroundColor);
+            // guardar colores normalizados en la instancia para uso desde otros métodos
+            this._textColor = textColor;
+            this._buttonColor = buttonColor;
+            this._backgroundColor = backgroundColor;
+
+            console.log('Color del botón (normalizado):', buttonColor);
+            console.log('Color del fondo (normalizado):', backgroundColor);
+            console.log('Color del texto (normalizado):', textColor);
 
             // Crear contenedor para la lista de videos
             const videoListContainer = document.createElement('a-entity');
@@ -43,7 +51,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const title = document.createElement('a-text');
             title.setAttribute('value', 'LISTA CANCIONES');
             title.setAttribute('align', 'center');
-            title.setAttribute('color', this.data.textColor);
+            title.setAttribute('color', textColor);
             title.setAttribute('width', 4); // Ajustar el ancho del texto
             title.setAttribute('position', '0 1.6 0.1'); // Posición ajustada para estar al inicio del cuadro
             background.appendChild(title);
@@ -72,7 +80,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const topText = document.createElement('a-text');
                 topText.setAttribute('value', `${index + 1}. ${fileName}`);
                 topText.setAttribute('align', 'left');
-                topText.setAttribute('color', this.data.textColor);
+                topText.setAttribute('color', textColor);
                 topText.setAttribute('width', 2.6); // ancho disponible dentro del botón
                 // posicionar hacia la izquierda dentro del plano (x negativo)
                 topText.setAttribute('position', `-1.1 0.18 0.1`);
@@ -83,7 +91,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const bottomText = document.createElement('a-text');
                 bottomText.setAttribute('value', `${artistName} (${videoDuration})`);
                 bottomText.setAttribute('align', 'left');
-                bottomText.setAttribute('color', this.data.textColor);
+                bottomText.setAttribute('color', textColor);
                 bottomText.setAttribute('width', 2.6);
                 bottomText.setAttribute('position', `-1.1 -0.18 0.1`);
                 bottomText.setAttribute('wrap-count', '40');
@@ -548,7 +556,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const backText = document.createElement('a-text');
             backText.setAttribute('value', '<<');
             backText.setAttribute('align','center');
-            backText.setAttribute('color','#ffffffff');
+            backText.setAttribute('color','#ffffff');
             backText.setAttribute('position','0 0 0.01');
             // Aumentar tamaño del texto: usar scale para agrandar visualmente
             backText.setAttribute('width','1.0');
@@ -847,7 +855,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const evalText = document.createElement('a-text');
                 evalText.setAttribute('value', 'EVALUATE SONG');
                 evalText.setAttribute('align', 'center');
-                evalText.setAttribute('color', '#8e8a8aff');
+                evalText.setAttribute('color', this._textColor || '#ffffff');
                 // Ajustar width para que el texto escalado no quede recortado (ligeramente mayor que el scale)
                 evalText.setAttribute('width', (btnWidth - 0.2) * 1.8);
                 // Duplicar el tamaño de la letra: aumentar la escala del texto
