@@ -28,7 +28,9 @@ document.addEventListener('DOMContentLoaded', function() {
             // Use 6-digit hex defaults to avoid THREE.Color warnings
             backgroundColor: { type: 'string', default: '#454545' },
             videoPosition: { type: 'string', default: '0 2.5 3' },
-            listPosition: { type: 'string', default: '6 2.5 -3' }
+            listPosition: { type: 'string', default: '6 2.5 -3' },
+            // Escala global aplicada al contenedor de la lista de canciones
+            escalaLista: { type: 'number', default: 1.0 }
         },
         init: function () {
             L('Inicializando componente karaoke-vr');
@@ -68,6 +70,15 @@ document.addEventListener('DOMContentLoaded', function() {
             // Crear contenedor para la lista de videos
             const videoListContainer = document.createElement('a-entity');
             videoListContainer.setAttribute('position', this.data.listPosition);
+            // Aplicar escala solicitada por el usuario (escalaLista)
+            try {
+                const listaScale = parseFloat(this.data.escalaLista) || 1.0;
+                videoListContainer.setAttribute('scale', `${listaScale} ${listaScale} ${listaScale}`);
+                this._listaScale = listaScale;
+                L('karaoke-vr: lista scale set to', listaScale);
+            } catch (e) {
+                L('karaoke-vr: failed to apply lista scale, using default 1.0', e);
+            }
 
             // Crear fondo para la lista de videos
             const background = document.createElement('a-plane');
@@ -84,7 +95,7 @@ document.addEventListener('DOMContentLoaded', function() {
             title.setAttribute('align', 'center');
             title.setAttribute('color', textColor);
             title.setAttribute('width', 4); // Ajustar el ancho del texto
-            title.setAttribute('position', '0 1.6 0.1'); // Posición ajustada para estar al inicio del cuadro
+            title.setAttribute('position', '0 1.35 0.1'); // Posición ajustada para estar al inicio del cuadro
             background.appendChild(title);
 
             videoListContainer.appendChild(background);
