@@ -28,11 +28,11 @@ AFRAME.registerComponent('evaluacion-vr', {
 
         // Título de la evaluación
         const title = document.createElement('a-text');
-        title.setAttribute('value', 'EVALUACIÓN');
+        title.setAttribute('value', 'EVALUATION');
         title.setAttribute('align', 'center');
         title.setAttribute('color', '#ffffff');
         title.setAttribute('width', data.width);
-        title.setAttribute('position', `0 ${data.height/2 - 0.3} 0.01`);
+        title.setAttribute('position', `0 ${data.height/2 - 0.25} 0.01`);
         title.setAttribute('wrap-count', '20');
         el.appendChild(title);
 
@@ -52,9 +52,19 @@ AFRAME.registerComponent('evaluacion-vr', {
         ar.setAttribute('align', 'left');
         ar.setAttribute('color', '#cfcfcf');
         ar.setAttribute('width', data.width - 0.2);
-        ar.setAttribute('position', `-${data.width/2 - 0.12} ${0.25} 0.01`);
+        ar.setAttribute('position', `-${data.width/2 - 0.12} ${0.4} 0.01`);
         ar.setAttribute('wrap-count', '30');
         el.appendChild(ar);
+
+        // mensaje de instrucción
+        const instr = document.createElement('a-text');
+        instr.setAttribute('value', 'Select a Difficulty Rating (1-3):');
+        instr.setAttribute('align', 'center');
+        instr.setAttribute('color', '#ffffff');
+        instr.setAttribute('width', data.width - 0.9);
+        instr.setAttribute('position', `0 ${0.2} 0.01`);
+        instr.setAttribute('wrap-count', '30');
+        el.appendChild(instr);
 
         // Input numérico 1..3: tres botones horizontales
         const inputContainer = document.createElement('a-entity');
@@ -69,13 +79,13 @@ AFRAME.registerComponent('evaluacion-vr', {
             btn.setAttribute('segments', 32);
             btn.setAttribute('color', '#666666');
             btn.setAttribute('class', 'clickable');
-            btn.setAttribute('position', `${(n-2)*0.7} 0 0`);
+            btn.setAttribute('position', `${(n-2)*0.7} -0.2 0`);
             const txt = document.createElement('a-text');
             txt.setAttribute('value', String(n));
             txt.setAttribute('align', 'center');
             txt.setAttribute('color', '#ffffff');
-            txt.setAttribute('width', 0.9);
-            txt.setAttribute('position', '0 0 0.02');
+            txt.setAttribute('width', 3.0);
+            txt.setAttribute('position', '0 -0.0 0.02');
             btn.appendChild(txt);
             btn.addEventListener('click', () => {
                 this._selectNumber(n);
@@ -83,6 +93,16 @@ AFRAME.registerComponent('evaluacion-vr', {
             inputContainer.appendChild(btn);
             this._numButtons.push(btn);
         }
+
+        //label for input
+        const inputLabel = document.createElement('a-text');
+        inputLabel.setAttribute('value', '1:EASY, 2:NORMAL, 3:HARD');
+        inputLabel.setAttribute('align', 'center');
+        inputLabel.setAttribute('color', '#ffffff');
+        inputLabel.setAttribute('width', data.width - 0.9);
+        inputLabel.setAttribute('position', `0 -0.0 0.01`);
+        inputLabel.setAttribute('wrap-count', '30');
+        el.appendChild(inputLabel);
 
         // Evaluate (confirm) button
         const evalBtn = document.createElement('a-plane');
@@ -95,7 +115,7 @@ AFRAME.registerComponent('evaluacion-vr', {
         evalText.setAttribute('value', 'EVALUATE');
         evalText.setAttribute('align', 'center');
         evalText.setAttribute('color', '#ffffff');
-        evalText.setAttribute('width', 1.0);
+        evalText.setAttribute('width', 3.0);
         evalText.setAttribute('position', '0 0 0.02');
         evalBtn.appendChild(evalText);
         evalBtn.addEventListener('click', () => {
