@@ -1002,6 +1002,61 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch (e) {
                 // fallback: nada
             }
+
+            // Mostrar panel de evaluación a la izquierda del componente karaoke
+            try {
+                // Intentar colocar el panel frente a la cámara para asegurar visibilidad
+                let evalPosX = -2, evalPosY = 1.6, evalPosZ = -1.5;
+                try {
+                    const sceneEl = this.el.sceneEl;
+                    if (sceneEl && sceneEl.camera && sceneEl.camera.el) {
+                        const camEl = sceneEl.camera.el;
+                        // obtener posición de la cámara
+                        const camPos = camEl.getAttribute('position') || { x: 0, y: 1.6, z: 0 };
+                        evalPosX = (camPos.x !== undefined) ? camPos.x : evalPosX;
+                        evalPosY = (camPos.y !== undefined) ? camPos.y : evalPosY;
+                        evalPosZ = (camPos.z !== undefined) ? (camPos.z - 1.2) : evalPosZ;
+                    }
+                } catch (e) {
+                    // fallback: usar valores por defecto
+                }
+
+                // Si ya existe el panel, actualizar datos y mostrarlo
+                if (this._evaluationPanel && this._evaluationPanel.parentNode) {
+                    try {
+                        this._evaluationPanel.setAttribute('evaluacion-vr', { songTitle: fileName, artist: artist, position: `${evalPosX} ${evalPosY} ${evalPosZ}`, visible: true });
+                    } catch (e) {
+                        // fallback a setAttribute con string
+                        this._evaluationPanel.setAttribute('evaluacion-vr', `songTitle: ${fileName}; artist: ${artist}; position: ${evalPosX} ${vy} ${vz}; visible: true`);
+                    }
+                } else {
+                    // Crear nuevo elemento evaluacion-vr
+                    const evalEl = document.createElement('a-entity');
+                    evalEl.setAttribute('id', 'evaluacion-panel');
+                    try {
+                        evalEl.setAttribute('evaluacion-vr', { songTitle: fileName, artist: artist, position: `${evalPosX} ${evalPosY} ${evalPosZ}`, visible: true });
+                    } catch (e) {
+                        evalEl.setAttribute('evaluacion-vr', `songTitle: ${fileName}; artist: ${artist}; position: ${evalPosX} ${vy} ${vz}; visible: true`);
+                    }
+                    // Añadir al mismo parent de karaoke (mejor visibilidad) o a la escena
+                    try {
+                        if (this.el.parentNode) this.el.parentNode.appendChild(evalEl);
+                        else if (this.el.sceneEl) this.el.sceneEl.appendChild(evalEl);
+                    } catch (e) {
+                        if (this.el.sceneEl) this.el.sceneEl.appendChild(evalEl);
+                    }
+                    // escuchar el evento submit-evaluation para recibir la calificación
+                    try {
+                        evalEl.addEventListener('submit-evaluation', (ev) => {
+                            L('Received evaluation:', ev.detail);
+                            // Aquí podrías enviar ev.detail al backend con fetch/XHR
+                        });
+                    } catch (e) { /* ignore */ }
+                    this._evaluationPanel = evalEl;
+                }
+            } catch (e) {
+                W('No se pudo mostrar el panel de evaluación:', e);
+            }
         }
     });
     

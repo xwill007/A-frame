@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Evaluación VR - Demo</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="evaluacion-vr.js"></script>
+    <link rel="stylesheet" href="evaluacion-vr.css" />
+</head>
+<body>
+    <a-scene background="color: #020214">
+        <a-entity position="0 1.6 0">
+            <a-entity evaluacion-vr="songTitle: StandByMe.mp4; artist: Ben E. King; position: -1 1.8 -2; visible: true">
+            </a-entity>
+        </a-entity>
+        <a-entity camera look-controls position="0 1.6 3"></a-entity>
+    </a-scene>
+</body>
+</html>
