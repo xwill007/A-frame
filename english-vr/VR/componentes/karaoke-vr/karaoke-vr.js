@@ -31,6 +31,11 @@ document.addEventListener('DOMContentLoaded', function() {
             listPosition: { type: 'string', default: '6 2.5 -3' },
             // Escala global aplicada al contenedor de la lista de canciones
             escalaLista: { type: 'number', default: 1.0 }
+            ,
+            // Escala (multiplicador) para la fuente del título "LISTA CANCIONES"
+            tituloFontScale: { type: 'number', default: 1.0 },
+            // Escala (multiplicador) para la fuente de los items (título de canción y artista)
+            itemFontScale: { type: 'number', default: 1.0 }
         },
         init: function () {
             L('Inicializando componente karaoke-vr');
@@ -96,6 +101,11 @@ document.addEventListener('DOMContentLoaded', function() {
             title.setAttribute('color', textColor);
             title.setAttribute('width', 4); // Ajustar el ancho del texto
             title.setAttribute('position', '0 1.35 0.1'); // Posición ajustada para estar al inicio del cuadro
+            // Aplicar escala de fuente para el título si se pasó en el schema
+            try {
+                const tScale = parseFloat(this.data.tituloFontScale) || 1.0;
+                title.setAttribute('scale', `${tScale} ${tScale} ${tScale}`);
+            } catch (e) { /* ignore */ }
             background.appendChild(title);
 
             videoListContainer.appendChild(background);
@@ -125,9 +135,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 topText.setAttribute('color', textColor);
                 topText.setAttribute('width', 2.6); // ancho disponible dentro del botón
                 // posicionar hacia la izquierda dentro del plano (x negativo)
-                topText.setAttribute('position', `-1.1 0.18 0.1`);
+                // Ajustar margen izquierdo (x) más cerca del centro para reducir el padding
+                topText.setAttribute('position', `-1.5 0.1 0.1`);
                 // reducir ligeramente el tamaño para que quepa bien
                 topText.setAttribute('wrap-count', '30');
+                // aplicar escala de fuente para título de item
+                let iScale = 1.0;
+                try {
+                    iScale = parseFloat(this.data.itemFontScale) || 1.0;
+                    topText.setAttribute('scale', `${iScale} ${iScale} ${iScale}`);
+                } catch (e) { /* ignore */ }
 
                 // Crear un texto para la línea inferior: artista y duración, alineado a la izquierda
                 const bottomText = document.createElement('a-text');
@@ -135,8 +152,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 bottomText.setAttribute('align', 'left');
                 bottomText.setAttribute('color', textColor);
                 bottomText.setAttribute('width', 2.6);
-                bottomText.setAttribute('position', `-1.1 -0.18 0.1`);
+                // aplicar la misma posición X reducida para el texto inferior (artista/duración)
+                bottomText.setAttribute('position', `-1.5 -0.18 0.1`);
                 bottomText.setAttribute('wrap-count', '40');
+                // aplicar la misma escala de fuente que el título de item (artista mismo tamaño)
+                try {
+                    bottomText.setAttribute('scale', `${iScale} ${iScale} ${iScale}`);
+                } catch (e) { /* ignore */ }
 
                 // Hacer el botón accesible por teclado
                 button.setAttribute('tabindex', '0');
