@@ -213,6 +213,44 @@ document.addEventListener('DOMContentLoaded', function() {
 
             this.el.appendChild(videoListContainer);
 
+            // Enviar la lista de canciones al backend para registrar/actualizar
+            try {
+                // Construir array de entradas en formato "Titulo_Autor.ext"
+                const itemsForBackend = videos.map(v => {
+                    const parts = v.split('|');
+                    let fname = (parts[0] || '').trim();
+                    const artist = (parts[1] || '').trim();
+
+                    // Si el filename ya contiene '_' antes de la extensión asumimos formato Title_Author.ext
+                    const baseName = fname.replace(/^.*[\\/]/, '');
+                    if (baseName.indexOf('_') !== -1) {
+                        return baseName.replace(/\s+/g, '_');
+                    }
+
+                    // Insertar artist antes de la extensión si está disponible
+                    const dotIndex = fname.lastIndexOf('.');
+                    const nameNoExt = dotIndex !== -1 ? fname.slice(0, dotIndex) : fname;
+                    const ext = dotIndex !== -1 ? fname.slice(dotIndex) : '';
+                    const artistPart = artist ? ('_' + artist.replace(/\s+/g, '_')) : '';
+                    return (nameNoExt.replace(/\s+/g, '_') + artistPart + ext).replace(/__+/g, '_');
+                }).filter(Boolean);
+
+                if (itemsForBackend.length) {
+                    const query = encodeURIComponent(itemsForBackend.join(','));
+                    const url = '/A-frame/Proyecto/backend/modelos/canciones/registrar_canciones.php?list=' + query;
+                    // Llamada asíncrona; no bloquea la UI. Guardamos resultado en this._registeredSongs
+                    fetch(url, { method: 'GET' })
+                        .then((resp) => resp.json())
+                        .then((data) => {
+                            L('registrar_canciones:', data);
+                            if (data && data.songs) this._registeredSongs = data.songs;
+                        })
+                        .catch((err) => { W('Error registrando canciones:', err); });
+                }
+            } catch (e) {
+                W('Error preparando petición registrar_canciones:', e);
+            }
+
             // Configurar raycasting manual para clicks del mouse/touch si no hay cursor con rayOrigin: mouse
             const setupPointerRaycast = () => {
                 L('setting up pointer raycast for karaoke-vr');
