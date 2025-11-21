@@ -3,6 +3,7 @@ AFRAME.registerComponent('evaluacion-vr', {
     schema: {
         songTitle: { type: 'string', default: '' },
         artist: { type: 'string', default: '' },
+        phraseId: { type: 'int', default: 1 },
         width: { type: 'number', default: 3.2 },
         height: { type: 'number', default: 2.2 },
         position: { type: 'string', default: '-2 2.5 3' },
@@ -127,10 +128,88 @@ AFRAME.registerComponent('evaluacion-vr', {
                 setTimeout(() => evalBtn.setAttribute('color', prev), 300);
                 return;
             }
-            // emitir evento con la evaluación y limpiar
+            // cuando hay selección: obtener palabras desde el backend y mostrarlas
             const payload = { rating: this._selected, songTitle: data.songTitle, artist: data.artist };
-            try { el.emit('submit-evaluation', payload); } catch(e){}
-            try { if (el.parentNode) el.parentNode.removeChild(el); } catch(e){}
+            // send songTitle + author so backend can lookup id_cancion and return related words
+            const songTitleParam = encodeURIComponent(data.songTitle || '');
+            const authorParam = encodeURIComponent(data.artist || '');
+            const archivoParam = encodeURIComponent(data.songTitle || '');
+            const url = `/A-frame/Proyecto/backend/modelos/palabras/obtener_palabras.php?archivo=${archivoParam}&author=${authorParam}&debug=1`;
+
+            // mostrar indicador de carga
+            this._clearWords();
+            const loading = document.createElement('a-text');
+            loading.setAttribute('value', 'Loading words...');
+            loading.setAttribute('align', 'left');
+            loading.setAttribute('color', '#ffffcc');
+            loading.setAttribute('width', data.width - 0.9);
+            loading.setAttribute('position', `-${data.width/2 - 0.12} ${-0.75} 0.01`);
+            this._wordsContainer.appendChild(loading);
+            console.log('Evaluate song requested for:', data.songTitle, data.artist, 'phraseId:', data.phraseId);
+            console.log('Fetching words from URL:', url);
+
+            fetch(url, { credentials: 'same-origin' })
+                .then(r => {
+                    console.log('Fetch response:', r.status, r.statusText);
+                    return r.json().then(json => ({ status: r.status, ok: r.ok, json }));
+                })
+                .then(({ status, ok, json }) => {
+                    console.log('Parsed API JSON:', json);
+                    if (this._wordsContainer && loading.parentNode === this._wordsContainer) {
+                        try { this._wordsContainer.removeChild(loading); } catch(e){}
+                    }
+
+                    if (!json || (json.status && json.status !== 'success')) {
+                        console.warn('API returned no words or error:', json);
+                        const err = document.createElement('a-text');
+                        err.setAttribute('value', 'No words found');
+                        err.setAttribute('align', 'left');
+                        err.setAttribute('color', '#ffcccc');
+                        err.setAttribute('width', data.width - 0.9);
+                        err.setAttribute('position', `-${data.width/2 - 0.12} ${-0.75} 0.01`);
+                        this._wordsContainer.appendChild(err);
+                        try { el.emit('submit-evaluation', payload); } catch(e){}
+                        return;
+                    }
+
+                    const words = json.words || [];
+                    // posición inicial para la primera palabra
+                    let y = -0.75;
+                    words.forEach((w, idx) => {
+                        const t = document.createElement('a-text');
+                        const esp = w.esp_palabra || '';
+                        const ing = w.ing_palabra || '';
+                        t.setAttribute('value', `${esp} — ${ing}`);
+                        t.setAttribute('align', 'left');
+                        t.setAttribute('color', '#ffffff');
+                        t.setAttribute('width', data.width - 0.9);
+                        t.setAttribute('position', `-${data.width/2 - 0.12} ${y} 0.01`);
+                        t.setAttribute('wrap-count', '40');
+                        this._wordsContainer.appendChild(t);
+                        y -= 0.14;
+                    });
+
+                    // anexar las palabras al payload y emitir evento
+                    payload.words = words;
+                    // incluir 'archivo' en el payload para trazabilidad
+                    payload.archivo = data.songTitle || '';
+                    console.log('Emitting submit-evaluation with payload:', payload);
+                    try { el.emit('submit-evaluation', payload); } catch(e){}
+                })
+                .catch(err => {
+                    console.error('Error fetching words:', err);
+                    if (this._wordsContainer && loading.parentNode === this._wordsContainer) {
+                        try { this._wordsContainer.removeChild(loading); } catch(e){}
+                    }
+                    const eTxt = document.createElement('a-text');
+                    eTxt.setAttribute('value', 'Error fetching words');
+                    eTxt.setAttribute('align', 'left');
+                    eTxt.setAttribute('color', '#ffaaaa');
+                    eTxt.setAttribute('width', data.width - 0.9);
+                    eTxt.setAttribute('position', `-${data.width/2 - 0.12} ${-0.75} 0.01`);
+                    this._wordsContainer.appendChild(eTxt);
+                    try { el.emit('submit-evaluation', payload); } catch(e){}
+                });
         });
         el.appendChild(evalBtn);
 
@@ -159,6 +238,10 @@ AFRAME.registerComponent('evaluacion-vr', {
         this._bg = bg;
         this._closeBtn = closeBtn;
         this._evalBtn = evalBtn;
+        // contenedor para palabras que se mostrarán debajo
+        this._wordsContainer = document.createElement('a-entity');
+        this._wordsContainer.setAttribute('position', '0 0 0.01');
+        el.appendChild(this._wordsContainer);
     },
 
     update: function(oldData) {
@@ -189,4 +272,13 @@ AFRAME.registerComponent('evaluacion-vr', {
             try { btn.setAttribute('color', (idx === (n-1)) ? '#ffcc00' : '#666666'); } catch(e){}
         });
     }
+    ,
+
+    _clearWords: function() {
+        try {
+            while (this._wordsContainer && this._wordsContainer.firstChild) {
+                this._wordsContainer.removeChild(this._wordsContainer.firstChild);
+            }
+        } catch(e) {}
+    },
 });
