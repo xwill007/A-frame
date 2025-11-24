@@ -67,10 +67,16 @@ AFRAME.registerComponent('evaluacion-vr', {
         instr.setAttribute('wrap-count', '30');
         el.appendChild(instr);
 
+    // store reference so we can hide it when quiz starts
+    this._instr = instr;
+
         // Input numérico 1..3: tres botones horizontales
         const inputContainer = document.createElement('a-entity');
         inputContainer.setAttribute('position', `0 -0.15 0.01`);
         el.appendChild(inputContainer);
+
+    // store reference so it can be hidden when quiz begins
+    this._inputContainer = inputContainer;
 
         this._numButtons = [];
         this._selected = null;
@@ -104,6 +110,9 @@ AFRAME.registerComponent('evaluacion-vr', {
         inputLabel.setAttribute('position', `0 -0.0 0.01`);
         inputLabel.setAttribute('wrap-count', '30');
         el.appendChild(inputLabel);
+
+    // keep reference to hide later
+    this._inputLabel = inputLabel;
 
         // Evaluate (confirm) button
         const evalBtn = document.createElement('a-plane');
@@ -226,6 +235,38 @@ AFRAME.registerComponent('evaluacion-vr', {
         });
         el.appendChild(closeBtn);
 
+        // Enable mouse pointer (non-raycaster) clicks on the close button by performing
+        // a THREE.Raycaster test from the camera using the mouse screen coords.
+        try {
+            const THREE = AFRAME.THREE;
+            this._mouse = new THREE.Vector2();
+            this._raycaster = new THREE.Raycaster();
+            this._onPointerDown = (evt) => {
+                try {
+                    const sceneEl = this.el.sceneEl;
+                    const canvas = sceneEl && sceneEl.canvas ? sceneEl.canvas : document.querySelector('canvas');
+                    if (!canvas || !sceneEl.camera) return;
+                    const rect = canvas.getBoundingClientRect();
+                    // normalize mouse coords [-1,1]
+                    this._mouse.x = ((evt.clientX - rect.left) / rect.width) * 2 - 1;
+                    this._mouse.y = - ((evt.clientY - rect.top) / rect.height) * 2 + 1;
+                    this._raycaster.setFromCamera(this._mouse, sceneEl.camera);
+                    // collect mesh objects belonging to closeBtn
+                    const meshes = [];
+                    if (this._closeBtn && this._closeBtn.object3D) {
+                        this._closeBtn.object3D.traverse(o => { if (o.isMesh) meshes.push(o); });
+                    }
+                    if (!meshes.length) return;
+                    const intersects = this._raycaster.intersectObjects(meshes, true);
+                    if (intersects && intersects.length) {
+                        // trigger same close action as the click handler
+                        try { if (this.el.parentNode) this.el.parentNode.removeChild(this.el); } catch(e){}
+                    }
+                } catch(e) { /* ignore */ }
+            };
+            window.addEventListener('pointerdown', this._onPointerDown);
+        } catch(e) {}
+
         // store refs
         this._titleEl = title;
         this._songEl = st;
@@ -233,6 +274,10 @@ AFRAME.registerComponent('evaluacion-vr', {
         this._bg = bg;
         this._closeBtn = closeBtn;
         this._evalBtn = evalBtn;
+    // input refs (stored earlier)
+    this._inputLabel = this._inputLabel || null;
+    this._inputContainer = this._inputContainer || null;
+    this._instr = this._instr || null;
         // contenedor para palabras que se mostrarán debajo
         this._wordsContainer = document.createElement('a-entity');
         this._wordsContainer.setAttribute('position', '0 0 0.01');
@@ -260,6 +305,13 @@ AFRAME.registerComponent('evaluacion-vr', {
     }
     ,
 
+    remove: function() {
+        // cleanup global listeners
+        try {
+            if (this._onPointerDown) window.removeEventListener('pointerdown', this._onPointerDown);
+        } catch(e) {}
+    },
+
     _selectNumber: function(n) {
         this._selected = n;
         // highlight selected button
@@ -277,6 +329,24 @@ AFRAME.registerComponent('evaluacion-vr', {
         this._awaitingAnswer = false;
         // clear any previous UI
         this._clearWords();
+        // hide previous texts / controls so only quiz UI is visible
+        try {
+            const toHide = ['_titleEl','_songEl','_artistEl','_instr','_inputLabel','_inputContainer','_evalBtn'];
+            toHide.forEach(k => {
+                try {
+                    const elRef = this[k];
+                    if (elRef) {
+                        // some refs are arrays (e.g., buttons); handle both
+                        if (Array.isArray(elRef)) {
+                            elRef.forEach(x => { try { x.setAttribute('visible', false); } catch(e){} });
+                        } else {
+                            try { elRef.setAttribute('visible', false); } catch(e){}
+                        }
+                    }
+                } catch(e){}
+            });
+        } catch(e) {}
+
         // render first question
         this._renderQuestion();
     }
@@ -302,13 +372,21 @@ AFRAME.registerComponent('evaluacion-vr', {
             const eng = current.ing || '';
             const correctEsp = current.esp || '';
 
-            // English word label
+            // Center the quiz content on the grey plane (plane center is 0,0)
+            // Place English word near the top-center of the plane, options centered below it.
+            const planeW = this.data.width;
+            const planeH = this.data.height;
+            const centerY = 0; // plane center
+            const engY = centerY + (planeH * 0.18); // towards the top of the panel
+            const optionsY = centerY - (planeH * 0.06); // a bit below center
+            const progY = centerY - (planeH * 0.22);
+
             const engTxt = document.createElement('a-text');
             engTxt.setAttribute('value', eng);
             engTxt.setAttribute('align', 'center');
             engTxt.setAttribute('color', '#ffffff');
-            engTxt.setAttribute('width', this.data.width - 0.4);
-            engTxt.setAttribute('position', `0 ${-0.55} 0.01`);
+            engTxt.setAttribute('width', Math.max(1.0, planeW - 0.6));
+            engTxt.setAttribute('position', `0 ${engY} 0.01`);
             engTxt.setAttribute('wrap-count', '30');
             this._wordsContainer.appendChild(engTxt);
 
@@ -336,15 +414,19 @@ AFRAME.registerComponent('evaluacion-vr', {
                 const tmp = options[i]; options[i] = options[j]; options[j] = tmp;
             }
 
-            // Create option buttons (horizontal)
-            const startX = -0.9;
+            // Create option buttons (horizontal) centered under the english word
+            const optW = 1.0;
+            const optGap = 0.12;
+            const totalW = options.length * optW + (options.length - 1) * optGap;
+            const startX = - (totalW / 2) + (optW / 2);
             options.forEach((opt, i) => {
                 const btn = document.createElement('a-plane');
-                btn.setAttribute('width', 1.0);
-                btn.setAttribute('height', 0.3);
+                btn.setAttribute('width', optW);
+                btn.setAttribute('height', 0.32);
                 btn.setAttribute('color', '#333333');
                 btn.setAttribute('class', 'clickable');
-                btn.setAttribute('position', `${startX + i*1.05} ${-0.95} 0.01`);
+                const x = startX + i * (optW + optGap);
+                btn.setAttribute('position', `${x} ${optionsY} 0.01`);
                 btn.setAttribute('material', 'shader: flat');
 
                 const txt = document.createElement('a-text');
@@ -364,13 +446,13 @@ AFRAME.registerComponent('evaluacion-vr', {
                 this._wordsContainer.appendChild(btn);
             });
 
-            // progress indicator
+            // progress indicator (centered under options)
             const prog = document.createElement('a-text');
             prog.setAttribute('value', `Word ${idx+1} / ${this._quizWords.length}`);
             prog.setAttribute('align', 'center');
             prog.setAttribute('color', '#cfcfcf');
-            prog.setAttribute('width', this.data.width - 0.9);
-            prog.setAttribute('position', `0 ${-1.25} 0.01`);
+            prog.setAttribute('width', Math.max(1.0, planeW - 0.9));
+            prog.setAttribute('position', `0 ${progY} 0.01`);
             this._wordsContainer.appendChild(prog);
 
             this._awaitingAnswer = false;
