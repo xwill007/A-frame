@@ -15,7 +15,21 @@ AFRAME.registerComponent('evaluacion-vr', {
         const data = this.data;
 
         // Set initial position & visibility
-        el.setAttribute('position', data.position);
+        // Move the panel 2 units farther on Z so it's slightly away from the camera when rendered.
+        // Keep the original position in case it's needed later.
+        this._origPosition = data.position;
+        let _adjustedPos = data.position;
+        try {
+            const parts = ('' + data.position).trim().split(/\s+/);
+            if (parts.length === 3) {
+                const x = parseFloat(parts[0]) || 0;
+                const y = parseFloat(parts[1]) || 0;
+                const z = parseFloat(parts[2]) || 0;
+                _adjustedPos = `${x} ${y + 1} ${z - 1}`;
+            }
+        } catch (e) { /* ignore and use provided position */ }
+        this._adjustedPosition = _adjustedPos;
+        el.setAttribute('position', _adjustedPos);
         el.setAttribute('visible', data.visible);
 
         // Fondo
@@ -36,6 +50,45 @@ AFRAME.registerComponent('evaluacion-vr', {
         title.setAttribute('position', `0 ${data.height/2 - 0.25} 0.01`);
         title.setAttribute('wrap-count', '20');
         el.appendChild(title);
+
+    // User info display (name and id) — positioned centered under the title
+    const userTxt = document.createElement('a-text');
+    userTxt.setAttribute('value', 'User: Guest (id: 0)');
+    userTxt.setAttribute('align', 'center');
+    userTxt.setAttribute('color', '#ccccff');
+    // slightly narrower than panel so it wraps nicely
+    userTxt.setAttribute('width', data.width - 0.4);
+    // place centered above the title so it doesn't overlap the song list
+    userTxt.setAttribute('position', `0 ${data.height/2 - 0.05} 0.01`);
+    userTxt.setAttribute('wrap-count', '24');
+    // slightly smaller so it doesn't overflow the panel
+    userTxt.setAttribute('scale', '0.75 0.75 1');
+    el.appendChild(userTxt);
+    this._userText = userTxt;
+
+        // populate user info from localStorage or session endpoint
+        try {
+            const localId = (function(){ try { return localStorage.getItem('user_id'); } catch(e){ return null; } })();
+            if (localId) {
+                console.log('evaluacion-vr: local user_id found in localStorage ->', localId);
+                // try to also show name if stored
+                const localName = (function(){ try { return localStorage.getItem('user_name'); } catch(e){ return null; } })();
+                this._userText.setAttribute('value', `User: ${localName || 'User'} (id: ${localId})`);
+            } else {
+                // ask server for current session user
+                fetch('/A-frame/Proyecto/backend/modelos/usuarios/current_user.php', { credentials: 'same-origin' })
+                    .then(r => r.json())
+                    .then(j => {
+                        if (j && j.status === 'success' && j.user && j.user.id) {
+                            const uid = j.user.id;
+                            const uname = j.user.nombre || j.user.email || 'User';
+                            try { localStorage.setItem('user_id', String(uid)); console.log('evaluacion-vr: saved user_id to localStorage ->', uid); } catch(e){}
+                            try { localStorage.setItem('user_name', String(uname)); console.log('evaluacion-vr: saved user_name to localStorage ->', uname); } catch(e){}
+                            this._userText.setAttribute('value', `User: ${uname} (id: ${uid})`);
+                        }
+                    }).catch(e => { /* ignore */ });
+            }
+        } catch(e) { /* ignore */ }
 
         // Song title
         const st = document.createElement('a-text');
@@ -377,7 +430,20 @@ AFRAME.registerComponent('evaluacion-vr', {
         try {
             if (this._songEl) this._songEl.setAttribute('value', this.data.songTitle || 'Sin título');
             if (this._artistEl) this._artistEl.setAttribute('value', this.data.artist || 'Artista desconocido');
-            if (this.el) this.el.setAttribute('position', this.data.position);
+            // Recompute adjusted position (original minus 2 on Z) when attributes update
+            try {
+                const posStr = this.data.position || this._origPosition || '0 0 0';
+                const parts = ('' + posStr).trim().split(/\s+/);
+                let adj = posStr;
+                if (parts.length === 3) {
+                    const x = parseFloat(parts[0]) || 0;
+                    const y = parseFloat(parts[1]) || 0;
+                    const z = parseFloat(parts[2]) || 0;
+                    adj = `${x} ${y} ${z - 2}`;
+                }
+                if (this.el) this.el.setAttribute('position', adj);
+                this._adjustedPosition = adj;
+            } catch (e) { /* ignore */ }
             if (this.el) this.el.setAttribute('visible', this.data.visible);
         } catch(e) {}
     },
@@ -392,6 +458,56 @@ AFRAME.registerComponent('evaluacion-vr', {
         }
     }
     ,
+
+    // Save evaluation to backend. Attempts to obtain user id from localStorage or session endpoint.
+    _saveEvaluation: function(info) {
+        try {
+            const archivo = info.archivo || '';
+            const total = Number.isFinite(info.total) ? info.total : 0;
+            const nota = info.nota_evaluacion || null;
+            const terminado = info.terminado ? 1 : 0;
+
+            const doPost = (idUsuario) => {
+                const body = { id_usuario: idUsuario || 0, archivo: archivo, total: total, nota_evaluacion: nota, terminado: terminado };
+                fetch('/A-frame/Proyecto/backend/modelos/evaluaciones/guardar_evaluacion.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                    credentials: 'same-origin'
+                }).then(r => r.json()).then(j => {
+                    console.log('guardar_evaluacion response', j);
+                    if (j && j.status === 'success' && j.id_evaluacion && idUsuario) {
+                        // store last evaluation id optionally
+                        try { localStorage.setItem('last_evaluation_id', j.id_evaluacion); } catch(e){}
+                    }
+                }).catch(err => console.warn('Error saving evaluation', err));
+            };
+
+            // Try client-side stored user id first
+            let uid = null;
+            try { uid = localStorage.getItem('user_id'); } catch(e) { uid = null; }
+            if (uid) {
+                doPost(parseInt(uid,10));
+                return;
+            }
+
+            // Fallback: query session from server
+            fetch('/A-frame/Proyecto/backend/modelos/usuarios/current_user.php', { credentials: 'same-origin' })
+                .then(r => r.json())
+                .then(j => {
+                    if (j && j.status === 'success' && j.user && j.user.id) {
+                        try { localStorage.setItem('user_id', String(j.user.id)); } catch(e){}
+                        doPost(j.user.id);
+                    } else {
+                        // send as anonymous (user_id = 0)
+                        doPost(0);
+                    }
+                }).catch(e => {
+                    // network issue: send anonymous
+                    doPost(0);
+                });
+        } catch(e) { console.warn('saveEvaluation error', e); }
+    },
 
     remove: function() {
         // cleanup global listeners
@@ -572,6 +688,9 @@ AFRAME.registerComponent('evaluacion-vr', {
                         console.log('Quiz complete — emitting submit-evaluation with payload:', payload);
                         try { this.el.emit('submit-evaluation', payload); } catch(e){}
 
+                        // Save evaluation to backend: completed
+                        try { this._saveEvaluation({ archivo: payload.archivo, total: this._quizWords.length, nota_evaluacion: '', terminado: 1 }); } catch(e){}
+
                         // show finished message
                         this._clearWords();
                         const done = document.createElement('a-text');
@@ -601,6 +720,8 @@ AFRAME.registerComponent('evaluacion-vr', {
                     fail.setAttribute('width', this.data.width - 0.9);
                     fail.setAttribute('position', `0 ${-0.75} 0.01`);
                     this._wordsContainer.appendChild(fail);
+                    // report incorrect attempt (save partial result and the wrong word)
+                    try { this._saveEvaluation({ archivo: this.data.songTitle || '', total: idx, nota_evaluacion: option, terminado: 0 }); } catch(e){}
                     setTimeout(() => this._renderQuestion(), 800);
                 }, 350);
             }
