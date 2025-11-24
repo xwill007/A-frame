@@ -173,28 +173,23 @@ AFRAME.registerComponent('evaluacion-vr', {
                     }
 
                     const words = json.words || [];
-                    // posición inicial para la primera palabra
-                    let y = -0.75;
-                    words.forEach((w, idx) => {
-                        const t = document.createElement('a-text');
-                        const esp = w.esp_palabra || '';
-                        const ing = w.ing_palabra || '';
-                        t.setAttribute('value', `${esp} — ${ing}`);
-                        t.setAttribute('align', 'left');
-                        t.setAttribute('color', '#ffffff');
-                        t.setAttribute('width', data.width - 0.9);
-                        t.setAttribute('position', `-${data.width/2 - 0.12} ${y} 0.01`);
-                        t.setAttribute('wrap-count', '40');
-                        this._wordsContainer.appendChild(t);
-                        y -= 0.14;
-                    });
+                    if (!words.length) {
+                        const err = document.createElement('a-text');
+                        err.setAttribute('value', 'No words found');
+                        err.setAttribute('align', 'left');
+                        err.setAttribute('color', '#ffcccc');
+                        err.setAttribute('width', data.width - 0.9);
+                        err.setAttribute('position', `-${data.width/2 - 0.12} ${-0.75} 0.01`);
+                        this._wordsContainer.appendChild(err);
+                        try { el.emit('submit-evaluation', payload); } catch(e){}
+                        return;
+                    }
 
-                    // anexar las palabras al payload y emitir evento
-                    payload.words = words;
-                    // incluir 'archivo' en el payload para trazabilidad
-                    payload.archivo = data.songTitle || '';
-                    console.log('Emitting submit-evaluation with payload:', payload);
-                    try { el.emit('submit-evaluation', payload); } catch(e){}
+                    // Start interactive multiple-choice quiz using fetched words
+                    // map to simple form [{esp, ing}]
+                    const quizWords = words.map(w => ({ esp: w.esp_palabra || '', ing: w.ing_palabra || '' }));
+                    // store quiz state and begin
+                    this._startQuiz(quizWords, payload);
                 })
                 .catch(err => {
                     console.error('Error fetching words:', err);
@@ -271,6 +266,171 @@ AFRAME.registerComponent('evaluacion-vr', {
         (this._numButtons || []).forEach((btn, idx) => {
             try { btn.setAttribute('color', (idx === (n-1)) ? '#ffcc00' : '#666666'); } catch(e){}
         });
+    }
+    ,
+
+    // Initialize and start quiz flow with the fetched words
+    _startQuiz: function(words, payload) {
+        this._quizWords = words || [];
+        this._currentIndex = 0;
+        this._payloadForSubmit = payload || {};
+        this._awaitingAnswer = false;
+        // clear any previous UI
+        this._clearWords();
+        // render first question
+        this._renderQuestion();
+    }
+    ,
+
+    // Render current question: show English word and three Spanish options
+    _renderQuestion: function() {
+        try {
+            this._clearWords();
+            if (!this._quizWords || !this._quizWords.length) {
+                const noTxt = document.createElement('a-text');
+                noTxt.setAttribute('value', 'No quiz words available');
+                noTxt.setAttribute('align', 'left');
+                noTxt.setAttribute('color', '#ffcccc');
+                noTxt.setAttribute('width', this.data.width - 0.9);
+                noTxt.setAttribute('position', `-${this.data.width/2 - 0.12} ${-0.75} 0.01`);
+                this._wordsContainer.appendChild(noTxt);
+                return;
+            }
+
+            const idx = this._currentIndex || 0;
+            const current = this._quizWords[idx];
+            const eng = current.ing || '';
+            const correctEsp = current.esp || '';
+
+            // English word label
+            const engTxt = document.createElement('a-text');
+            engTxt.setAttribute('value', eng);
+            engTxt.setAttribute('align', 'center');
+            engTxt.setAttribute('color', '#ffffff');
+            engTxt.setAttribute('width', this.data.width - 0.4);
+            engTxt.setAttribute('position', `0 ${-0.55} 0.01`);
+            engTxt.setAttribute('wrap-count', '30');
+            this._wordsContainer.appendChild(engTxt);
+
+            // Prepare options: correct + two random distractors
+            const distractors = [];
+            const pool = this._quizWords.map(w => w.esp).filter((s, i) => i !== idx && s);
+            // shuffle pool
+            for (let i = pool.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                const tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
+            }
+            if (pool.length >= 2) {
+                distractors.push(pool[0], pool[1]);
+            } else if (pool.length === 1) {
+                distractors.push(pool[0]);
+            }
+
+            const options = [correctEsp].concat(distractors).slice(0,3);
+            // if less than 3 options, pad with empty strings
+            while (options.length < 3) options.push('');
+
+            // shuffle options so correct isn't always first
+            for (let i = options.length -1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                const tmp = options[i]; options[i] = options[j]; options[j] = tmp;
+            }
+
+            // Create option buttons (horizontal)
+            const startX = -0.9;
+            options.forEach((opt, i) => {
+                const btn = document.createElement('a-plane');
+                btn.setAttribute('width', 1.0);
+                btn.setAttribute('height', 0.3);
+                btn.setAttribute('color', '#333333');
+                btn.setAttribute('class', 'clickable');
+                btn.setAttribute('position', `${startX + i*1.05} ${-0.95} 0.01`);
+                btn.setAttribute('material', 'shader: flat');
+
+                const txt = document.createElement('a-text');
+                txt.setAttribute('value', opt || '—');
+                txt.setAttribute('align', 'center');
+                txt.setAttribute('color', '#ffffff');
+                txt.setAttribute('width', 2.2);
+                txt.setAttribute('position', '0 0 0.02');
+                btn.appendChild(txt);
+
+                // click handler
+                btn.addEventListener('click', (evt) => {
+                    if (this._awaitingAnswer) return;
+                    this._chooseOption(opt, evt.currentTarget);
+                });
+
+                this._wordsContainer.appendChild(btn);
+            });
+
+            // progress indicator
+            const prog = document.createElement('a-text');
+            prog.setAttribute('value', `Word ${idx+1} / ${this._quizWords.length}`);
+            prog.setAttribute('align', 'center');
+            prog.setAttribute('color', '#cfcfcf');
+            prog.setAttribute('width', this.data.width - 0.9);
+            prog.setAttribute('position', `0 ${-1.25} 0.01`);
+            this._wordsContainer.appendChild(prog);
+
+            this._awaitingAnswer = false;
+        } catch(e) { console.warn('Render question error', e); }
+    }
+    ,
+
+    // Handle option selection: on correct advance, on incorrect restart to first
+    _chooseOption: function(option, btnEl) {
+        try {
+            if (this._awaitingAnswer) return;
+            this._awaitingAnswer = true;
+            const idx = this._currentIndex || 0;
+            const correct = (this._quizWords && this._quizWords[idx]) ? this._quizWords[idx].esp : '';
+            if (option === correct) {
+                // correct: flash green and advance
+                try { btnEl.setAttribute('color', '#118811'); } catch(e){}
+                setTimeout(() => {
+                    this._currentIndex = idx + 1;
+                    if (this._currentIndex >= this._quizWords.length) {
+                        // finished: emit payload
+                        const payload = this._payloadForSubmit || {};
+                        payload.words = this._quizWords;
+                        payload.archivo = this.data.songTitle || '';
+                        console.log('Quiz complete — emitting submit-evaluation with payload:', payload);
+                        try { this.el.emit('submit-evaluation', payload); } catch(e){}
+
+                        // show finished message
+                        this._clearWords();
+                        const done = document.createElement('a-text');
+                        done.setAttribute('value', 'All correct! Evaluation submitted.');
+                        done.setAttribute('align', 'center');
+                        done.setAttribute('color', '#aaffaa');
+                        done.setAttribute('width', this.data.width - 0.9);
+                        done.setAttribute('position', `0 ${-0.75} 0.01`);
+                        this._wordsContainer.appendChild(done);
+                        this._awaitingAnswer = false;
+                        return;
+                    }
+                    // render next
+                    this._renderQuestion();
+                }, 350);
+            } else {
+                // incorrect: flash red, then restart from first
+                try { btnEl.setAttribute('color', '#aa2222'); } catch(e){}
+                setTimeout(() => {
+                    this._currentIndex = 0;
+                    // show feedback
+                    this._clearWords();
+                    const fail = document.createElement('a-text');
+                    fail.setAttribute('value', 'Incorrect — restarting from first word');
+                    fail.setAttribute('align', 'center');
+                    fail.setAttribute('color', '#ffaaaa');
+                    fail.setAttribute('width', this.data.width - 0.9);
+                    fail.setAttribute('position', `0 ${-0.75} 0.01`);
+                    this._wordsContainer.appendChild(fail);
+                    setTimeout(() => this._renderQuestion(), 800);
+                }, 350);
+            }
+        } catch(e) { console.warn('Choose option error', e); this._awaitingAnswer = false; }
     }
     ,
 
