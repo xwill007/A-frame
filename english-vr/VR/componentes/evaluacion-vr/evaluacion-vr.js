@@ -251,16 +251,104 @@ AFRAME.registerComponent('evaluacion-vr', {
                     this._mouse.x = ((evt.clientX - rect.left) / rect.width) * 2 - 1;
                     this._mouse.y = - ((evt.clientY - rect.top) / rect.height) * 2 + 1;
                     this._raycaster.setFromCamera(this._mouse, sceneEl.camera);
-                    // collect mesh objects belonging to closeBtn
+
+                    // collect mesh objects and map uuids back to their elements
                     const meshes = [];
+                    const meshMap = Object.create(null);
+
+                    // close button meshes
                     if (this._closeBtn && this._closeBtn.object3D) {
-                        this._closeBtn.object3D.traverse(o => { if (o.isMesh) meshes.push(o); });
+                        this._closeBtn.object3D.traverse(o => {
+                            if (o.isMesh) {
+                                meshes.push(o);
+                                meshMap[o.uuid] = { type: 'close', el: this._closeBtn };
+                            }
+                        });
                     }
+
+                    // numeric buttons (difficulty selector)
+                    (this._numButtons || []).forEach((b, idx) => {
+                        try {
+                            if (b && b.object3D) {
+                                b.object3D.traverse(o => {
+                                    if (o.isMesh) {
+                                        meshes.push(o);
+                                        meshMap[o.uuid] = { type: 'num', index: idx, el: b };
+                                    }
+                                });
+                            }
+                        } catch(e) {}
+                    });
+
+                    // option buttons (current quiz options) - created dynamically in _renderQuestion
+                    (this._optionButtons || []).forEach((b, idx) => {
+                        try {
+                            if (b && b.object3D) {
+                                b.object3D.traverse(o => {
+                                    if (o.isMesh) {
+                                        meshes.push(o);
+                                        meshMap[o.uuid] = { type: 'option', index: idx, el: b };
+                                    }
+                                });
+                            }
+                        } catch(e) {}
+                    });
+
+                    // evaluate button meshes (allow screen mouse clicks without VR cursor)
+                    if (this._evalBtn && this._evalBtn.object3D) {
+                        this._evalBtn.object3D.traverse(o => {
+                            if (o.isMesh) {
+                                meshes.push(o);
+                                meshMap[o.uuid] = { type: 'eval', el: this._evalBtn };
+                            }
+                        });
+                    }
+
                     if (!meshes.length) return;
                     const intersects = this._raycaster.intersectObjects(meshes, true);
                     if (intersects && intersects.length) {
-                        // trigger same close action as the click handler
-                        try { if (this.el.parentNode) this.el.parentNode.removeChild(this.el); } catch(e){}
+                        const hit = intersects[0].object;
+                        const info = meshMap[hit.uuid];
+                        if (info) {
+                            if (info.type === 'close') {
+                                try { if (this.el.parentNode) this.el.parentNode.removeChild(this.el); } catch(e){}
+                                return;
+                            }
+                            if (info.type === 'num') {
+                                // call the same selection method as the UI buttons
+                                try { this._selectNumber(info.index + 1); } catch(e){}
+                                return;
+                            }
+                            if (info.type === 'option') {
+                                // Trigger the option button's click handler
+                                try {
+                                    info.el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+                                } catch (e) {
+                                    try { this._chooseOption && this._chooseOption(info.el && info.el.value, info.el); } catch(e){}
+                                }
+                                return;
+                            }
+                            if (info.type === 'eval') {
+                                // Trigger the evaluate button's click handler as if clicked by mouse
+                                try {
+                                    // Prefer dispatching a MouseEvent so handlers expecting MouseEvent run
+                                    info.el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+                                } catch (e) {
+                                    try { info.el.click && info.el.click(); } catch (e) {}
+                                }
+                                return;
+                            }
+                            if (info.type === 'eval') {
+                                // Trigger the evaluate button's click handler as if clicked by mouse
+                                try {
+                                    // Prefer dispatching a MouseEvent so handlers expecting MouseEvent run
+                                    info.el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+                                } catch (e) {
+                                    try { info.el.click && info.el.click(); } catch (e) {}
+                                }
+                                return;
+                            }
+                        }
                     }
                 } catch(e) { /* ignore */ }
             };
@@ -415,6 +503,8 @@ AFRAME.registerComponent('evaluacion-vr', {
             }
 
             // Create option buttons (horizontal) centered under the english word
+            // Keep references so we can detect clicks via screen mouse raycasting
+            this._optionButtons = [];
             const optW = 1.0;
             const optGap = 0.12;
             const totalW = options.length * optW + (options.length - 1) * optGap;
@@ -444,6 +534,8 @@ AFRAME.registerComponent('evaluacion-vr', {
                 });
 
                 this._wordsContainer.appendChild(btn);
+                // store reference for external raycast-based clicks
+                try { this._optionButtons.push(btn); } catch(e){}
             });
 
             // progress indicator (centered under options)
@@ -521,6 +613,8 @@ AFRAME.registerComponent('evaluacion-vr', {
             while (this._wordsContainer && this._wordsContainer.firstChild) {
                 this._wordsContainer.removeChild(this._wordsContainer.firstChild);
             }
+            // clear any stored option button refs to avoid stale handles
+            try { this._optionButtons = []; } catch(e){}
         } catch(e) {}
     },
 });
