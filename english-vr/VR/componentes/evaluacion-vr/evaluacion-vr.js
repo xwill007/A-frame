@@ -1,4 +1,4 @@
-// Componente de evaluación simple para VR
+﻿// Componente de evaluación simple para VR
 AFRAME.registerComponent('evaluacion-vr', {
     schema: {
         songTitle: { type: 'string', default: '' },
@@ -269,6 +269,14 @@ AFRAME.registerComponent('evaluacion-vr', {
                 });
         });
         el.appendChild(evalBtn);
+
+        // Contenedor para mostrar evaluaciones previas (debajo del botón EVALUATE)
+        this._evaluationsContainer = document.createElement('a-entity');
+        this._evaluationsContainer.setAttribute('position', `0 ${-data.height/2 - 0.5} 0.01`);
+        el.appendChild(this._evaluationsContainer);
+
+        // Cargar evaluaciones previas al iniciar
+        this._loadPreviousEvaluations();
 
         // Close button
         const closeBtn = document.createElement('a-plane');
@@ -737,5 +745,154 @@ AFRAME.registerComponent('evaluacion-vr', {
             // clear any stored option button refs to avoid stale handles
             try { this._optionButtons = []; } catch(e){}
         } catch(e) {}
+    },
+
+    // Cargar y mostrar evaluaciones previas de la canción actual
+    _loadPreviousEvaluations: function() {
+        try {
+            const data = this.data;
+            const songTitle = data.songTitle || '';
+            
+            // Obtener id de usuario
+            const userId = (function(){
+                try {
+                    return localStorage.getItem('user_id') || null;
+                } catch(e) {
+                    return null;
+                }
+            })();
+
+            // Construir URL para obtener evaluaciones
+            const archivoParam = encodeURIComponent(songTitle);
+            let url = `/A-frame/Proyecto/backend/modelos/evaluaciones/obtener_evaluaciones.php?archivo=${archivoParam}`;
+            
+            if (userId) {
+                url += `&id_usuario=${userId}`;
+            }
+
+            console.log('Cargando evaluaciones previas desde:', url);
+
+            // Mostrar indicador de carga
+            const loading = document.createElement('a-text');
+            loading.setAttribute('value', 'Loading previous evaluations...');
+            loading.setAttribute('align', 'center');
+            loading.setAttribute('color', '#888888');
+            loading.setAttribute('width', this.data.width - 0.4);
+            loading.setAttribute('position', '0 0 0');
+            loading.setAttribute('wrap-count', '30');
+            this._evaluationsContainer.appendChild(loading);
+
+            fetch(url, { credentials: 'same-origin' })
+                .then(r => {
+                    console.log('Evaluaciones response:', r.status, r.statusText);
+                    return r.json();
+                })
+                .then(json => {
+                    console.log('Evaluaciones JSON:', json);
+                    
+                    // Limpiar indicador de carga
+                    while (this._evaluationsContainer.firstChild) {
+                        this._evaluationsContainer.removeChild(this._evaluationsContainer.firstChild);
+                    }
+
+                    if (!json || json.status !== 'success') {
+                        console.warn('No se pudieron cargar las evaluaciones:', json?.message || 'error desconocido');
+                        return;
+                    }
+
+                    const evaluations = json.evaluations || [];
+                    
+                    if (evaluations.length === 0) {
+                        const noEvals = document.createElement('a-text');
+                        noEvals.setAttribute('value', 'No previous evaluations found');
+                        noEvals.setAttribute('align', 'center');
+                        noEvals.setAttribute('color', '#666666');
+                        noEvals.setAttribute('width', this.data.width - 0.4);
+                        noEvals.setAttribute('position', '0 0 0');
+                        noEvals.setAttribute('wrap-count', '30');
+                        this._evaluationsContainer.appendChild(noEvals);
+                        return;
+                    }
+
+                    // Mostrar título de sección
+                    const titleEvals = document.createElement('a-text');
+                    titleEvals.setAttribute('value', 'Previous Evaluations:');
+                    titleEvals.setAttribute('align', 'center');
+                    titleEvals.setAttribute('color', '#ffffff');
+                    titleEvals.setAttribute('width', this.data.width - 0.4);
+                    titleEvals.setAttribute('position', '0.1 0.3 0');
+                    titleEvals.setAttribute('wrap-count', '30');
+                    this._evaluationsContainer.appendChild(titleEvals);
+
+                    // Mostrar hasta 3 evaluaciones más recientes
+                    const maxDisplay = 3;
+                    evaluations.slice(0, maxDisplay).forEach((ev, idx) => {
+                        const yPos = 0.05 - (idx * 0.15);
+                        
+                        // Formatear fecha de forma compacta (sin espacios que causen saltos de línea)
+                        let dateStr = '';
+                        try {
+                            const d = new Date(ev.fecha_hora);
+                            // Formato compacto: DD/MM/YYYY-HH:MM:SS (sin espacios)
+                            const day = String(d.getDate()).padStart(2, '0');
+                            const month = String(d.getMonth() + 1).padStart(2, '0');
+                            const year = d.getFullYear();
+                            const hours = String(d.getHours()).padStart(2, '0');
+                            const minutes = String(d.getMinutes()).padStart(2, '0');
+                            const seconds = String(d.getSeconds()).padStart(2, '0');
+                            dateStr = `${day}/${month}/${year}-${hours}:${minutes}:${seconds}`;
+                        } catch(e) {
+                            dateStr = (ev.fecha_hora || 'N/A').replace(/\s+/g, '-');
+                        }
+
+                        // Determinar estado
+                        const status = ev.terminado ? 'Completed' : 'Incomplete';
+                        const statusColor = ev.terminado ? '#00ff00' : '#ff0000';
+                        
+                        // Texto de evaluación con id_cancion incluido
+                        const evalText = `${status} | SCORE:${ev.total} | LAST WORD:${ev.nota_evaluacion || 'no'} | ${dateStr}`;
+                        
+                        const evalItem = document.createElement('a-text');
+                        evalItem.setAttribute('value', evalText);
+                        evalItem.setAttribute('align', 'left');
+                        evalItem.setAttribute('color', statusColor);
+                        evalItem.setAttribute('width', this.data.width - 0.3);
+                        evalItem.setAttribute('position', `-${this.data.width/2 - 0.10} ${yPos} 0`);
+                        evalItem.setAttribute('wrap-count', '80');
+                        evalItem.setAttribute('scale', '1.5 1.5 1');
+                        this._evaluationsContainer.appendChild(evalItem);
+                    });
+
+                    if (evaluations.length > maxDisplay) {
+                        const more = document.createElement('a-text');
+                        more.setAttribute('value', `... and ${evaluations.length - maxDisplay} more`);
+                        more.setAttribute('align', 'center');
+                        more.setAttribute('color', '#666666');
+                        more.setAttribute('width', this.data.width - 0.4);
+                        more.setAttribute('position', `0 ${0.05 - (maxDisplay * 0.15)} 0`);
+                        more.setAttribute('wrap-count', '30');
+                        more.setAttribute('scale', '0.7 0.7 1');
+                        this._evaluationsContainer.appendChild(more);
+                    }
+                })
+                .catch(err => {
+                    console.error('Error cargando evaluaciones:', err);
+                    // Limpiar indicador de carga
+                    while (this._evaluationsContainer.firstChild) {
+                        this._evaluationsContainer.removeChild(this._evaluationsContainer.firstChild);
+                    }
+                    
+                    const errorTxt = document.createElement('a-text');
+                    errorTxt.setAttribute('value', 'Error loading evaluations');
+                    errorTxt.setAttribute('align', 'center');
+                    errorTxt.setAttribute('color', '#ff6666');
+                    errorTxt.setAttribute('width', this.data.width - 0.4);
+                    errorTxt.setAttribute('position', '0 0 0');
+                    errorTxt.setAttribute('wrap-count', '30');
+                    this._evaluationsContainer.appendChild(errorTxt);
+                });
+        } catch(e) {
+            console.error('Error en _loadPreviousEvaluations:', e);
+        }
     },
 });
