@@ -96,7 +96,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Agregar título dentro del fondo
             const title = document.createElement('a-text');
-            title.setAttribute('value', 'LISTA CANCIONES');
+            title.setAttribute('value', 'SONGS LIST');
             title.setAttribute('align', 'center');
             title.setAttribute('color', textColor);
             title.setAttribute('width', 4); // Ajustar el ancho del texto
@@ -158,7 +158,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // Crear cuadro para el botón
                 const button = document.createElement('a-plane');
-                button.setAttribute('width', 3); // Ajustar el ancho del cuadro
+                button.setAttribute('width', 3.5); // Ajustar el ancho del cuadro
                 button.setAttribute('height', 0.7); // Ajustar la altura del cuadro
                 button.setAttribute('color', this._buttonColor);
                 button.setAttribute('position', `0 ${-index * 0.8 - 0.5} 0`); // Ajustar posición para dar espacio al título
