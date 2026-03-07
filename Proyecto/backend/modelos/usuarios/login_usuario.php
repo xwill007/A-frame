@@ -57,11 +57,11 @@ $row = $result->fetch_assoc();
 $hash = $row['password'];
 
 if (password_verify($password, $hash)) {
-    // Successful login: start session and return redirect
+    // Successful login: start session and return redirect + user id
     if (session_status() !== PHP_SESSION_ACTIVE) session_start();
     $_SESSION['user_id'] = $row['id'];
 
-    echo json_encode(['status' => 'success', 'redirect' => '/A-frame/english-vr/VR/index.html']);
+    echo json_encode(['status' => 'success', 'redirect' => '/A-frame/english-vr/VR/index.html', 'user_id' => (int)$row['id']]);
 } else {
     echo json_encode(['status' => 'error', 'message' => 'Contraseña incorrecta']);
 }

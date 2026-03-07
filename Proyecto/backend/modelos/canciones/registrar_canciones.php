@@ -27,6 +27,7 @@ if (!$tableExists) {
 		. "`id_cancion` INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,"
 		. "`titulo_cancion` VARCHAR(255) NOT NULL,"
 		. "`autor_cancion` VARCHAR(255) NOT NULL,"
+		. "`archivo_cancion` VARCHAR(255) NOT NULL,"
 		. "`fecha_hora_cancion` DATETIME DEFAULT CURRENT_TIMESTAMP,"
 		. "`idioma_cancion` VARCHAR(50) DEFAULT 'ingles',"
 		. "UNIQUE KEY `unique_song` (`titulo_cancion`,`autor_cancion`)"
@@ -38,6 +39,21 @@ if (!$tableExists) {
 		echo json_encode(['error' => 'Error al crear la tabla "' . $tableName . '": ' . $conn->error]);
 		$conn->close();
 		exit;
+	}
+}
+else {
+	// If table exists but column archivo_cancion is missing, add it.
+	$colCheck = "SHOW COLUMNS FROM `" . $tableName . "` LIKE 'archivo_cancion'";
+	$colRes = $conn->query($colCheck);
+	if ($colRes && $colRes->num_rows === 0) {
+		$alterSql = "ALTER TABLE `" . $tableName . "` ADD COLUMN `archivo_cancion` VARCHAR(255) NOT NULL AFTER `autor_cancion`";
+		if (!$conn->query($alterSql)) {
+			header('Content-Type: application/json; charset=utf-8');
+			http_response_code(500);
+			echo json_encode(['error' => 'Error al agregar columna archivo_cancion: ' . $conn->error]);
+			$conn->close();
+			exit;
+		}
 	}
 }
 
@@ -91,7 +107,7 @@ if ($inputList !== null && trim($inputList) !== '') {
 	$items = array_filter(array_map('trim', explode(',', $inputList)));
 
 	// Preparar statement de inserción con ON DUPLICATE KEY IGNORE por unique key
-	$insertSql = "INSERT INTO `" . $tableName . "` (`titulo_cancion`,`autor_cancion`) VALUES (?,?)"
+	$insertSql = "INSERT INTO `" . $tableName . "` (`titulo_cancion`,`autor_cancion`,`archivo_cancion`) VALUES (?,?,?)"
 		. " ON DUPLICATE KEY UPDATE titulo_cancion = titulo_cancion"; // no-op para evitar error
 	$stmtInsert = $conn->prepare($insertSql);
 	if (!$stmtInsert) {
@@ -106,11 +122,12 @@ if ($inputList !== null && trim($inputList) !== '') {
 		$parsed = parseFilenameToSong($it);
 		$titulo = $parsed['titulo'];
 		$autor = $parsed['autor'];
+		$archivo = basename($it);
 
 		// Si no hay título, saltar
 		if ($titulo === '') continue;
 
-		$stmtInsert->bind_param('ss', $titulo, $autor);
+		$stmtInsert->bind_param('sss', $titulo, $autor, $archivo);
 		try {
 			$stmtInsert->execute();
 		} catch (mysqli_sql_exception $e) {
@@ -123,14 +140,15 @@ if ($inputList !== null && trim($inputList) !== '') {
 
 // Ahora recuperar la lista completa de canciones y devolver JSON
 $songs = [];
-$selSql = "SELECT id_cancion, titulo_cancion, autor_cancion, fecha_hora_cancion, idioma_cancion FROM `" . $tableName . "` ORDER BY id_cancion ASC";
+$selSql = "SELECT id_cancion, titulo_cancion, autor_cancion, archivo_cancion, fecha_hora_cancion, idioma_cancion FROM `" . $tableName . "` ORDER BY id_cancion ASC";
 $res2 = $conn->query($selSql);
 if ($res2) {
 	while ($row = $res2->fetch_assoc()) {
 		$songs[] = [
 			'id_cancion' => (int)$row['id_cancion'],
 			'titulo_cancion' => $row['titulo_cancion'],
-			'autor_cancion' => $row['autor_cancion'],
+				'autor_cancion' => $row['autor_cancion'],
+				'archivo_cancion' => $row['archivo_cancion'],
 			'fecha_hora_cancion' => $row['fecha_hora_cancion'],
 			'idioma_cancion' => $row['idioma_cancion']
 		];

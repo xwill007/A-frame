@@ -96,7 +96,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Agregar título dentro del fondo
             const title = document.createElement('a-text');
-            title.setAttribute('value', 'LISTA CANCIONES');
+            title.setAttribute('value', 'SONGS LIST');
             title.setAttribute('align', 'center');
             title.setAttribute('color', textColor);
             title.setAttribute('width', 4); // Ajustar el ancho del texto
@@ -107,6 +107,43 @@ document.addEventListener('DOMContentLoaded', function() {
                 title.setAttribute('scale', `${tScale} ${tScale} ${tScale}`);
             } catch (e) { /* ignore */ }
             background.appendChild(title);
+
+            // Mostrar información del usuario (nombre e id) — ubicar centrado debajo del título
+            const userInfo = document.createElement('a-text');
+            userInfo.setAttribute('value', 'User: Guest (id: 0)');
+            userInfo.setAttribute('align', 'center');
+            userInfo.setAttribute('color', textColor);
+            // ancho cercano al fondo para evitar wrapping inesperado
+            userInfo.setAttribute('width', 3.6);
+            // colocar centrado arriba del título (evitar solapamiento con la lista)
+            userInfo.setAttribute('position', '0 1.6 0.1');
+            userInfo.setAttribute('wrap-count', '24');
+            // slightly smaller so it doesn't overflow the panel and stays inside the grey box
+            userInfo.setAttribute('scale', '0.75 0.75 1');
+            background.appendChild(userInfo);
+            this._userInfoText = userInfo;
+
+            // populate user info from localStorage or session endpoint
+            try {
+                const localId = (function(){ try { return localStorage.getItem('user_id'); } catch(e){ return null; } })();
+                if (localId) {
+                    console.log('karaoke-vr: local user_id found in localStorage ->', localId);
+                    const localName = (function(){ try { return localStorage.getItem('user_name'); } catch(e){ return null; } })();
+                    this._userInfoText.setAttribute('value', `User: ${localName || 'User'} (id: ${localId})`);
+                } else {
+                    fetch('/A-frame/Proyecto/backend/modelos/usuarios/current_user.php', { credentials: 'same-origin' })
+                        .then(r => r.json())
+                        .then(j => {
+                            if (j && j.status === 'success' && j.user && j.user.id) {
+                                const uid = j.user.id;
+                                const uname = j.user.nombre || j.user.email || 'User';
+                                try { localStorage.setItem('user_id', String(uid)); console.log('karaoke-vr: saved user_id to localStorage ->', uid); } catch(e){}
+                                try { localStorage.setItem('user_name', String(uname)); console.log('karaoke-vr: saved user_name to localStorage ->', uname); } catch(e){}
+                                this._userInfoText.setAttribute('value', `User: ${uname} (id: ${uid})`);
+                            }
+                        }).catch(e => { /* ignore */ });
+                }
+            } catch(e) { /* ignore */ }
 
             videoListContainer.appendChild(background);
 
@@ -121,7 +158,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 // Crear cuadro para el botón
                 const button = document.createElement('a-plane');
-                button.setAttribute('width', 3); // Ajustar el ancho del cuadro
+                button.setAttribute('width', 3.5); // Ajustar el ancho del cuadro
                 button.setAttribute('height', 0.7); // Ajustar la altura del cuadro
                 button.setAttribute('color', this._buttonColor);
                 button.setAttribute('position', `0 ${-index * 0.8 - 0.5} 0`); // Ajustar posición para dar espacio al título

@@ -50,6 +50,17 @@ document.addEventListener("DOMContentLoaded", () => {
         const data = await res.json();
 
         if (data.status === 'success') {
+          // Save user info to localStorage if backend returned it (convenience for VR clients)
+          try {
+            const uid = data.user_id || (data.user && data.user.id) || data.id || null;
+            const uname = data.user_name || (data.user && data.user.nombre) || data.nombre || data.email || null;
+            if (uid) {
+              try { localStorage.setItem('user_id', String(uid)); console.log('login: saved user_id to localStorage ->', uid); } catch(e){}
+            }
+            if (uname) {
+              try { localStorage.setItem('user_name', String(uname)); console.log('login: saved user_name to localStorage ->', uname); } catch(e){}
+            }
+          } catch (e) { /* ignore storage errors */ }
           // Redirect to supplied URL or default to main index
           const redirectTo = data.redirect || '/A-frame/Proyecto/frontend/index.html';
           window.location.href = redirectTo;
