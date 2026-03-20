@@ -159,6 +159,46 @@ document.addEventListener('DOMContentLoaded', function() {
                 background.appendChild(searchBarBg);
             }
 
+            const logoutButton = document.createElement('a-plane');
+            logoutButton.setAttribute('id', 'karaoke-logout-btn');
+            logoutButton.setAttribute('width', 1.0);
+            logoutButton.setAttribute('height', 0.34);
+            logoutButton.setAttribute('color', this._palette.danger || '#d21919');
+            logoutButton.setAttribute('position', this.data.showSearchBar ? '1.0 2.0 0.12' : '1.1 0.42 0.12');
+            logoutButton.setAttribute('class', 'clickable');
+            logoutButton.setAttribute('tabindex', '0');
+
+            const logoutText = document.createElement('a-text');
+            logoutText.setAttribute('value', 'EXIT');
+            logoutText.setAttribute('align', 'center');
+            logoutText.setAttribute('color', '#ffffff');
+            logoutText.setAttribute('width', 2.0);
+            logoutText.setAttribute('position', '0 -0.01 0.03');
+            logoutText.setAttribute('scale', '2.5');
+            logoutButton.appendChild(logoutText);
+
+            const goToStartView = () => {
+                try { localStorage.removeItem('user_id'); } catch (e) {}
+                try { localStorage.removeItem('user_name'); } catch (e) {}
+                window.location.href = '/A-frame/Proyecto/frontend/inicio/';
+            };
+
+            ['click', 'mousedown', 'touchstart', 'triggerdown', 'gripdown', 'abuttondown', 'xbuttondown', 'ybuttondown']
+                .forEach((ev) => logoutButton.addEventListener(ev, (event) => {
+                    if (event && event.defaultPrevented) return;
+                    goToStartView();
+                }));
+
+            logoutButton.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    goToStartView();
+                }
+            });
+
+            logoutButton._activateSelection = goToStartView;
+            background.appendChild(logoutButton);
+
             // populate user info from localStorage or session endpoint
             try {
                 const localId = (function(){ try { return localStorage.getItem('user_id'); } catch(e){ return null; } })();
@@ -185,6 +225,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Ajustar la lógica para incluir la duración del video
             const videos = this.data.videoList.split(',');
+            if (!this._karaokeButtons) this._karaokeButtons = [];
+            this._karaokeButtons.push(logoutButton);
             // Si la barra de busqueda visual esta activa, empujar la lista un poco hacia abajo
             // para evitar que el primer item se superponga con el input mock.
             const listVerticalOffset = this.data.showSearchBar ? 0.42 : 0;
@@ -283,7 +325,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 videoListContainer.appendChild(button);
 
                 // Guardar referencia para raycasting manual (mouse/touch)
-                if (!this._karaokeButtons) this._karaokeButtons = [];
                 this._karaokeButtons.push(button);
             });
 
