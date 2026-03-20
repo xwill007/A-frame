@@ -35,7 +35,11 @@ document.addEventListener('DOMContentLoaded', function() {
             // Escala (multiplicador) para la fuente del título "LISTA CANCIONES"
             tituloFontScale: { type: 'number', default: 1.0 },
             // Escala (multiplicador) para la fuente de los items (título de canción y artista)
-            itemFontScale: { type: 'number', default: 1.0 }
+            itemFontScale: { type: 'number', default: 1.0 },
+            // Muestra una barra de busqueda visual (mock) para capturas; sin logica de filtrado
+            showSearchBar: { type: 'boolean', default: true },
+            // Texto de marcador para la barra de busqueda visual
+            searchPlaceholder: { type: 'string', default: 'Search songs...' }
         },
         init: function () {
             L('Inicializando componente karaoke-vr');
@@ -123,6 +127,38 @@ document.addEventListener('DOMContentLoaded', function() {
             background.appendChild(userInfo);
             this._userInfoText = userInfo;
 
+            // Barra de busqueda visual (sin funcionalidad) para documentacion/capturas
+            // Se deja parametrizable para poder ocultarla facilmente cuando no se requiera.
+            if (this.data.showSearchBar) {
+                const searchBarBg = document.createElement('a-plane');
+                searchBarBg.setAttribute('width', 3.55);
+                searchBarBg.setAttribute('height', 0.34);
+                searchBarBg.setAttribute('color', this._buttonColor);
+                searchBarBg.setAttribute('position', '0 0.84 0.1');
+                searchBarBg.setAttribute('material', 'shader: flat; opacity: 1');
+
+                const searchLeft = document.createElement('a-text');
+                searchLeft.setAttribute('value', '[ ]');
+                searchLeft.setAttribute('align', 'left');
+                searchLeft.setAttribute('color', textColor);
+                searchLeft.setAttribute('width', 0.8);
+                searchLeft.setAttribute('position', '-1.7 -0.01 0.02');
+                searchLeft.setAttribute('scale', '0.7 0.7 1');
+
+                const searchPlaceholder = document.createElement('a-text');
+                searchPlaceholder.setAttribute('value', this.data.searchPlaceholder || 'Search songs...');
+                searchPlaceholder.setAttribute('align', 'left');
+                searchPlaceholder.setAttribute('color', textColor);
+                searchPlaceholder.setAttribute('width', 3.1);
+                searchPlaceholder.setAttribute('position', '-1.45 -0.01 0.02');
+                searchPlaceholder.setAttribute('wrap-count', '36');
+                searchPlaceholder.setAttribute('scale', '0.7 0.7 1');
+
+                searchBarBg.appendChild(searchLeft);
+                searchBarBg.appendChild(searchPlaceholder);
+                background.appendChild(searchBarBg);
+            }
+
             // populate user info from localStorage or session endpoint
             try {
                 const localId = (function(){ try { return localStorage.getItem('user_id'); } catch(e){ return null; } })();
@@ -149,6 +185,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Ajustar la lógica para incluir la duración del video
             const videos = this.data.videoList.split(',');
+            // Si la barra de busqueda visual esta activa, empujar la lista un poco hacia abajo
+            // para evitar que el primer item se superponga con el input mock.
+            const listVerticalOffset = this.data.showSearchBar ? 0.42 : 0;
             videos.forEach((video, index) => {
                 const [fileName, artist, duration] = video.split('|');
 
@@ -161,7 +200,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 button.setAttribute('width', 3.5); // Ajustar el ancho del cuadro
                 button.setAttribute('height', 0.7); // Ajustar la altura del cuadro
                 button.setAttribute('color', this._buttonColor);
-                button.setAttribute('position', `0 ${-index * 0.8 - 0.5} 0`); // Ajustar posición para dar espacio al título
+                button.setAttribute('position', `0 ${-index * 0.8 - 0.5 - listVerticalOffset} 0`); // Ajustar posición para dar espacio al título y barra de búsqueda
                 button.setAttribute('class', 'clickable');
 
                 // Crear texto para el título, artista y duración
