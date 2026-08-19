@@ -37,18 +37,7 @@ function initVRNavigation() {
 // Configuración de controles de teclado
 function initKeyboardControls() {
     document.addEventListener('keydown', function(e) {
-        const registroComponent = document.getElementById('registro-vr-component');
-        
         switch(e.key) {
-            case '1':
-                // El componente maneja todo internamente
-                if (registroComponent) {
-                    const formComponent = registroComponent.components['formulario-registro-vr'];
-                    if (formComponent) {
-                        formComponent.toggleForm();
-                    }
-                }
-                break;
             case '2':
                 const karaokeImg = document.querySelector('a-image[src="imagenes/karaoke.png"]');
                 if (karaokeImg) karaokeImg.click();
@@ -57,14 +46,6 @@ function initKeyboardControls() {
                 const listaImg = document.querySelector('a-image[src="imagenes/lista.png"]');
                 if (listaImg) listaImg.click();
                 break;
-            case 'Escape':
-                if (registroComponent) {
-                    const formComponent = registroComponent.components['formulario-registro-vr'];
-                    if (formComponent) {
-                        formComponent.hideForm();
-                    }
-                }
-                break;
         }
     });
 }
@@ -72,10 +53,8 @@ function initKeyboardControls() {
 // Mostrar controles disponibles en consola
 function showControls() {
     console.log('Controles VR:');
-    console.log('- 1: Mostrar/ocultar formulario de registro VR');
     console.log('- 2: Ir al karaoke VR');
     console.log('- 3: Ir a lista de canciones VR');
-    console.log('- ESC: Cerrar formulario');
     console.log('- Click/VR: Interactuar con elementos');
 }
 
