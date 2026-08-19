@@ -1,0 +1,484 @@
+# Requerimiento 002 — Nivel 3 de Evaluación: Pronunciación de Frases
+
+## 1. Objetivo
+
+Implementar un **tercer nivel de evaluación** dentro del componente `evaluacion-vr`. Este nivel se
+activa cuando, tras pulsar el botón **EVALUATE SONG** (karaoke-vr) y seleccionar **Nivel 3**, el
+sistema evalúa la **pronunciación en inglés de frases completas** almacenadas en la tabla
+`frases_vr` y asociadas a la canción seleccionada.
+
+En contraste con el Nivel 2 (pronunciación de palabras sueltas), el Nivel 3 pide al usuario que
+**pronuncie en voz alta una frase completa** (`frases_vr.ingles_frase`) y compara el resultado del
+reconocimiento de voz contra esa frase esperada usando un **algoritmo de similitud de texto**
+(distancia de Levenshtein) para obtener un puntaje de 0 a 100, en lugar de una comparación exacta.
+
+---
+
+## 2. Antecedentes y estado actual
+
+### 2.1 Flujo actual (nivel único de vocabulario)
+
+1. En `karaoke-vr.js`, el botón **EVALUATE SONG** invoca `evaluateSong(videoPath)` (~línea 1069).
+2. `evaluateSong()` crea/actualiza un panel con el componente `evaluacion-vr`, pasando
+   `songTitle`, `artist`, `position` y `visible`.
+3. El panel `evaluacion-vr` (`evaluacion-vr.js`) muestra:
+   - Título "EVALUATION", usuario, canción y artista.
+   - Selector de dificultad (1:EASY, 2:NORMAL, 3:HARD).
+   - Botón **EVALUATE**.
+4. Al pulsar **EVALUATE**, se hace `fetch` a `obtener_palabras.php` y se inicia `_startQuiz()`:
+   un quiz de opción múltiple (Nivel 1 actual).
+
+### 2.2 Tabla `frases_vr` (ya existente y poblada)
+
+La tabla de frases ya existe en `Proyecto/BaseDatos/english_vr.sql` (líneas 96-102) y contiene
+datos para las tres canciones:
+
+```sql
+CREATE TABLE `frases_vr` (
+  `id_frase` int(11) NOT NULL,
+  `canciones_id_frase` int(11) NOT NULL,
+  `ingles_frase` text NOT NULL,
+  `español_frase` text NOT NULL,
+  `tiempo_frase` time NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+```
+
+Campos usados en el Nivel 3:
+
+- `id_frase` — identificador único de la frase.
+- `canciones_id_frase` — FK hacia `canciones_vr.id_cancion`.
+- `ingles_frase` — frase en inglés (la que el usuario debe pronunciar).
+- `español_frase` — traducción de referencia (opcional en pantalla).
+- `tiempo_frase` — timestamp dentro de la canción (útil para sincronizar con la reproducción).
+
+Datos de ejemplo (canción 1, "Stand By Me"):
+
+| id_frase | canciones_id_frase | ingles_frase | español_frase | tiempo_frase |
+|---|---|---|---|---|
+| 1 | 1 | When the night has come | Cuando la noche ha llegado | 00:00:03 |
+| 2 | 1 | And the land is dark, | Y la tierra está oscura, | 00:00:06 |
+| 7 | 1 | Stand by me. | Quédate conmigo. | 00:00:20 |
+
+Nota de calidad de datos: algunas filas mezclan apóstrofo tipográfico (`won’t`, U+2019) y
+apóstrofo recto (`ain\'t`, U+0027). La normalización (sección 6.4) **debe** tratar ambos como
+equivalentes.
+
+### 2.3 Dependencia con el Requerimiento 001 (Nivel 2)
+
+El Requerimiento 001 introduce el **selector de nivel** en el panel (`_selectedLevel`), con
+"Nivel 1: Vocabulario" y "Nivel 2: Pronunciación". Este requerimiento **extiende** ese selector
+para incluir "Nivel 3: Frases". Si el 001 aún no está implementado, ambos se deben coordinar para
+que el selector tenga tres opciones desde el inicio.
+
+### 2.4 Archivos y datos relevantes
+
+| Recurso | Ruta | Rol |
+|---|---|---|
+| Componente evaluación | `english-vr/VR/componentes/evaluacion-vr/evaluacion-vr.js` | Panel y lógica de evaluación |
+| Demo del componente | `english-vr/VR/componentes/evaluacion-vr/evaluacion-vr.html` | Página de prueba del panel |
+| Karaoke (botón EVALUATE) | `english-vr/VR/componentes/karaoke-vr/karaoke-vr.js` | Dispara la evaluación |
+| Endpoint palabras | `Proyecto/backend/modelos/palabras/obtener_palabras.php` | Patrón a replicar para frases |
+| Endpoint frases (NUEVO) | `Proyecto/backend/modelos/frases/obtener_frases.php` | Por crear (devuelve `ingles_frase`) |
+| Endpoint guardado | `Proyecto/backend/modelos/evaluaciones/guardar_evaluacion.php` | Registra `evaluaciones_vr` |
+| Endpoint consulta | `Proyecto/backend/modelos/evaluaciones/obtener_evaluaciones.php` | Lee historial de evaluaciones |
+| Esquema BD | `Proyecto/BaseDatos/english_vr.sql` | Tablas `frases_vr`, `evaluaciones_vr`, etc. |
+
+---
+
+## 3. Alcance
+
+### Incluido
+
+- Selector de nivel 3 en el panel `evaluacion-vr` (coordinado con el 001).
+- Nuevo endpoint `obtener_frases.php` para consultar `frases_vr` por canción.
+- Flujo completo del Nivel 3: mostrar frase → escuchar → transcribir → comparar con similitud →
+  puntuar 0-100 → retroalimentar → avanzar/reintentar.
+- Algoritmo de similitud de texto (Levenshtein) con normalización previa.
+- Reacción visual en la escena A-Frame según el puntaje (neones/partículas/luces).
+- Guardado del resultado en `evaluaciones_vr` (diferenciando nivel).
+- Manejo de errores de micrófono y de compatibilidad del navegador.
+- Soporte de audio grabado (`MediaRecorder`) preparado para integrar una API de precisión
+  fonética en producción (ver sección 3.2).
+
+### No incluido (fuera de alcance de este requerimiento)
+
+- Integración real con APIs de evaluación fonética de pago (Azure Speech, SpeechSuper, Whisper).
+  Se deja el punto de extensión documentado, no implementado.
+- Comparación por fonemas / desglose color por color de fonemas.
+- Sincronización automática con `tiempo_frase` durante la reproducción del video (opcional futuro).
+- Cambios en el Nivel 1 (vocabulario) y Nivel 2 (palabras) salvo lo mínimo para convivir con el
+  selector de 3 niveles.
+
+### Estrategia recomendada en dos etapas (según retroalimentación recibida)
+
+1. **Etapa 1 (prototipo, este requerimiento):** Web Speech API nativa (`webkitSpeechRecognition`)
+   + comparación por Levenshtein. Gratuita, sin librerías externas, funciona en Chrome/Edge y en
+   el navegador de Meta Quest.
+2. **Etapa 2 (producción):** grabar audio con `MediaRecorder` y enviarlo vía `fetch` a una API
+   especializada (Azure Speech — Pronunciation Assessment, o SpeechSuper) para medir *accuracy*,
+   *fluency* y *completeness* a nivel de fonemas. El componente de captura de audio del Nivel 3
+   debe dejar el `Blob` disponible para este salto sin reescribir la lógica.
+
+---
+
+## 4. Requerimientos funcionales
+
+- **RF-1 — Selector de nivel 3.** El panel debe mostrar tres opciones de nivel:
+  - Nivel 1: Vocabulario (quiz de traducción).
+  - Nivel 2: Pronunciación de palabras (requerimiento 001).
+  - Nivel 3: Pronunciación de frases (este requerimiento).
+- **RF-2 — Obtención de frases.** Al elegir Nivel 3, se consulta `obtener_frases.php` usando
+  `archivo`/`author` (o `songTitle`) tal como hace `obtener_palabras.php`, y se obtienen las
+  frases `ingles_frase` de la canción.
+- **RF-3 — Presentación de frase.** Mostrar una frase en inglés a la vez (`ingles_frase`), junto
+  con un indicador de progreso (Frase N de M) y, opcionalmente, la traducción `español_frase`.
+- **RF-4 — Captura de voz continua.** Usar Web Speech API
+  (`window.SpeechRecognition || window.webkitSpeechRecognition`) con idioma `en-US` y
+  `continuous = true` / `interimResults = false` para capturar la frase completa, no una palabra.
+- **RF-5 — Botón de escucha.** Incluir un control explícito para iniciar/escuchar de nuevo
+  (evita depender del auto-arranque y sortea restricciones de autoplay de micrófono).
+- **RF-6 — Comparación por similitud.** Normalizar transcripción y frase esperada (sección 6.4) y
+  calcular la **distancia de Levenshtein** a nivel de palabras (y, como fallback, a nivel de
+  caracteres). Derivar un puntaje de 0 a 100.
+- **RF-7 — Umbrales de puntaje.** Clasificar el resultado:
+  - `score >= 80`: acierto (frase superada).
+  - `60 <= score < 80`: aceptable (avanzar con nota, o reintento opcional).
+  - `score < 60`: error (reintento de la misma frase).
+- **RF-8 — Retroalimentación visual.** Mostrar el puntaje numérico, la transcripción reconocida y
+  un color (verde/amarillo/rojo). Avanzar a la siguiente frase al superar el umbral.
+- **RF-9 — Reacción en la escena A-Frame.** Emitir eventos según el puntaje para alterar la
+  iluminación/neones (ver sección 6.5):
+  - `score >= 80`: encender neones, disparar partículas, sumar puntos.
+  - `score < 60`: cambiar luces a rojo/púrpura y resaltar la frase a repetir.
+- **RF-10 — Reintento.** Si falla, permitir reintentar la misma frase sin reiniciar toda la ronda.
+- **RF-11 — Finalización y guardado.** Al terminar todas las frases, emitir `submit-evaluation` y
+  guardar en `evaluaciones_vr` el total de frases, el puntaje promedio/último en
+  `nota_evaluacion`, `terminado=1` y el nivel (`nivel=3`).
+- **RF-12 — Manejo de errores.** Micrófono denegado (`not-allowed`), reconocimiento no disponible
+  (`SpeechRecognition` ausente), y transcripción vacía (`no-speech`) deben mostrarse como mensajes
+  claros sin romper la escena VR.
+
+---
+
+## 5. Requerimientos no funcionales
+
+- **RNF-1 Compatibilidad:** Web Speech API funciona en Chrome/Edge (incluido Meta Quest Browser).
+  En navegadores sin soporte se muestra "not supported" sin fallar silenciosamente.
+- **RNF-2 Usabilidad:** Instrucciones breves ("Say the phrase in English") y botón visible para
+  volver a escuchar. Mostrar la frase en un tamaño legible en VR.
+- **RNF-3 Rendimiento:** El reconocimiento no debe bloquear el renderizado de la escena A-Frame;
+  el cálculo de Levenshtein es O(n·m) y para frases cortas (< 50 palabras) es despreciable.
+- **RNF-4 Seguridad:** No persistir audio. Solo almacenar la transcripción y el puntaje en
+  `nota_evaluacion`. Si se graba audio con `MediaRecorder` (etapa 2), el `Blob` no se guarda en
+  base de datos ni se envía a terceros sin autorización.
+- **RNF-5 Consistencia:** Reutilizar la paleta de colores y el estilo visual del panel actual.
+- **RNF-6 Escalabilidad:** Aislar la comparación en una función pura (`_scorePhrase`) y la captura
+  de audio en un método independiente (`_startListening`) para poder sustituir el motor de
+  reconocimiento (Web Speech API → API externa) sin tocar el resto del flujo.
+
+---
+
+## 6. Diseño técnico
+
+### 6.1 Flujo de interacción propuesto
+
+```
+EVALUATE SONG (karaoke-vr)
+        │
+        ▼
+Panel evaluacion-vr
+        │
+        ├── Nivel 1 (Vocabulario) ──► _startQuiz()                    [actual]
+        ├── Nivel 2 (Pronunciación palabras) ──► _startPronunciation() [req 001]
+        │
+        └── Nivel 3 (Pronunciación frases) ──► _startPhrasePronunciation()
+                                            │
+                                            ▼
+                        fetch obtener_frases.php
+                                            │
+                                            ▼
+                        _renderPhrase(frase, index)
+                                            │
+                                            ▼
+                        SpeechRecognition.start()  (lang=en-US, continuous=true)
+                                            │
+                                            ▼
+                        onresult → transcript
+                                            │
+                                            ▼
+                        score = _scorePhrase(transcript, ingles_frase)
+                                            │
+                          ┌─────────────────┼─────────────────┐
+                        score>=80        60<=score<80      score<60
+                          │                 │                 │
+                     acierto (verde)    aceptable        error (rojo)
+                     avanza index++     avanza/avisa      reintento + evento
+                          │                 │            luz roja/púrpura
+                          └───────── fin de frases ────────┘
+                                            │
+                                            ▼
+                        emit submit-evaluation + _saveEvaluation(nivel=3)
+```
+
+### 6.2 Componentes y archivos afectados
+
+**`english-vr/VR/componentes/evaluacion-vr/evaluacion-vr.js`** (principal):
+
+- En `init()` (actualmente líneas 113-168 para el selector de dificultad):
+  - Agregar los botones de nivel, incluyendo "LEVEL 3: PHRASES".
+  - Almacenar `this._selectedLevel` (default `1`).
+- En el handler del botón **EVALUATE** (actualmente líneas 184-270):
+  - Si `_selectedLevel === 3`, tras obtener los datos llamar a
+    `_startPhrasePronunciation(phrases)`.
+- Nuevos métodos:
+  - `_startPhrasePronunciation(phrases)` — inicializa estado (equivalente a `_startQuiz`).
+  - `_renderPhrase()` — muestra `ingles_frase` actual, progreso y botón de escucha.
+  - `_startListening()` — crea/configura el `SpeechRecognition` (`en-US`, `continuous`).
+  - `_stopListening()` — detiene el reconocedor (se dispara con un botón o al recibir resultado).
+  - `_normalize(text)` — normalización de cadenas (sección 6.4).
+  - `_levenshtein(a, b)` — distancia de edición a nivel de palabras.
+  - `_scorePhrase(transcript, expected)` — devuelve `{ score, transcript, expected }`.
+  - `_handlePhraseResult(transcript)` — compara, puntúa, decide avanzar/reintentar y emite eventos.
+- Reutilizar `_saveEvaluation()` (línea 471) para persistir el resultado.
+- Reutilizar `_clearWords()` (línea 740) para limpiar el contenedor.
+
+**`english-vr/VR/componentes/karaoke-vr/karaoke-vr.js`** (reacción visual, opcional):
+
+- El panel ya se crea y escucha `submit-evaluation` (~línea 1125). Para la reacción visual se puede:
+  - Escuchar eventos personalizados emitidos por `evaluacion-vr` (p. ej. `phrase-result`,
+    `phrase-score`) y reaccionar cambiando luces/neones/partículas en la escena del karaoke.
+  - O implementar la reacción dentro del propio panel `evaluacion-vr` (más autocontenido).
+
+**`Proyecto/backend/modelos/frases/obtener_frases.php`** (NUEVO):
+
+- Replicar el patrón de `obtener_palabras.php`: aceptar `archivo` (preferido) o
+  `songTitle`+`author`, y devolver las frases de la canción.
+
+### 6.3 API / Base de datos
+
+**Nuevo endpoint — `GET /A-frame/Proyecto/backend/modelos/frases/obtener_frases.php`:**
+
+- Parámetros: `archivo` (nombre de archivo, p. ej. `StandByMe_BenEKing.mp4`) o
+  `songTitle` + `author`. Opcional `debug=1`.
+- Respuesta esperada:
+
+```json
+{
+  "status": "success",
+  "phrases": [
+    {
+      "id_frase": 1,
+      "ingles_frase": "When the night has come",
+      "espanol_frase": "Cuando la noche ha llegado",
+      "tiempo_frase": "00:00:03",
+      "id_cancion": 1
+    }
+  ]
+}
+```
+
+- Consulta SQL de referencia (espejo de `obtener_palabras.php`):
+
+```sql
+SELECT f.id_frase, f.ingles_frase, f.español_frase, f.tiempo_frase, f.canciones_id_frase
+FROM frases_vr f
+JOIN canciones_vr c ON f.canciones_id_frase = c.id_cancion
+WHERE c.archivo_cancion = '<archivo>'
+ORDER BY f.id_frase ASC;
+```
+
+**Guardado — `guardar_evaluacion.php`:**
+
+- Reutilizar el POST JSON existente: `{ id_usuario, archivo, total, nota_evaluacion, terminado }`.
+- `total` = número de frases de la ronda; `nota_evaluacion` = puntaje promedio (o puntaje de la
+  última frase); `terminado = 1`.
+- **Recomendado:** agregar la columna `nivel` (TINYINT, default 1) a `evaluaciones_vr` (ya
+  propuesta en el Requerimiento 001, sección 6.3) y enviar `nivel: 3` para diferenciar registros.
+
+```sql
+ALTER TABLE evaluaciones_vr ADD COLUMN nivel TINYINT NOT NULL DEFAULT 1;
+```
+
+### 6.4 Algoritmo de comparación de frases (similitud + puntaje)
+
+Como la frase esperada contiene puntuación, contracciones y apóstrofes, la comparación exacta es
+demasiado estricta. Se usa normalización + distancia de Levenshtein.
+
+**Normalización (`_normalize`) — aplicar a ambos lados:**
+
+1. Pasar a minúsculas (`toLowerCase()`).
+2. Normalizar apóstrofes: `’` (U+2019) y `'` (U+0027) → `'` (o eliminarlos).
+3. Eliminar puntuación y caracteres no alfanuméricos/espacios (`[^\w\s]` → espacio).
+4. Mapear contracciones habladas comunes: `gonna`→`going to`, `wanna`→`want to`,
+   `ain't`→`aint`/`is not`, `'cause`→`because`, `'em`→`them` (tolerar variantes del reconocedor).
+5. Colapsar espacios múltiples y recortar (`trim`).
+6. Convertir a lista de tokens (palabras) separando por espacios.
+
+**Distancia de Levenshtein a nivel de palabras (`_levenshtein`):**
+
+- Calcular distancia de edición entre los arrays de tokens de la transcripción y de la frase
+  esperada (inserción, borrado, sustitución = coste 1).
+
+**Puntaje (`_scorePhrase`):**
+
+```
+maxLen = max(tokens_transcript.length, tokens_expected.length)
+similarity = 1 - (levenshtein_distance / maxLen)      // 1.0 = idéntico, 0.0 = totalmente distinto
+score = round(similarity * 100)
+```
+
+- Fallback: si la transcripción tiene una sola palabra o el reconocedor devuelve texto corrido sin
+  espacios claros, calcular Levenshtein a nivel de caracteres y promediar con el de palabras.
+- Aceptar como acierto adicional si el texto esperado está contenido en la transcripción
+  (`includes`) tras normalización.
+
+**Umbrales (RF-7):**
+
+| Puntaje | Resultado | Acción |
+|---|---|---|
+| `>= 80` | Acierto | Verde, avanzar frase, evento de neón/partículas |
+| `60 - 79` | Aceptable | Amarillo, avanzar con nota |
+| `< 60` | Error | Rojo, reintento, evento de luz roja/púrpura |
+
+### 6.5 Reacción visual en la escena A-Frame
+
+El componente `evaluacion-vr` emite eventos que el karaoke (u otro componente) puede escuchar:
+
+- `phrase-result` — detalle `{ score, transcript, expected, passed }`.
+- `phrase-score` — detalle `{ score, threshold }` (para lógica de luces).
+
+Reacción sugerida según puntaje (retroalimentación recibida):
+
+- `score > 80`: encender neones (`<a-light>` a color cian/blanco, mayor `intensity`), disparar
+  partículas de luz y sumar puntos.
+- `score < 60`: cambiar el color de las luces a rojo/púrpura y mostrar en un `<a-text>` la frase
+  que debe repetir.
+
+Implementación mínima autocontenida: en el propio panel, cambiar el color del texto de resultado y
+emitir los eventos; la escena del karaoke los consume opcionalmente.
+
+### 6.6 Captura de audio para producción (etapa 2, punto de extensión)
+
+Además del reconocimiento por Web Speech API, preparar el componente para grabar audio:
+
+```js
+// Ejemplo conceptual de captura de audio en un componente A-Frame
+AFRAME.registerComponent('voice-checker', {
+  init: function () {
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+      this.mediaRecorder = new MediaRecorder(stream);
+      this.audioChunks = [];
+      this.mediaRecorder.ondataavailable = e => this.audioChunks.push(e.data);
+      this.mediaRecorder.onstop = () => this.evaluatePhrase();
+    });
+  },
+  startRecording: function () { this.mediaRecorder.start(); },
+  stopRecording: function () { this.mediaRecorder.stop(); },
+  evaluatePhrase: function () {
+    const audioBlob = new Blob(this.audioChunks, { type: 'audio/wav' });
+    // Aquí se enviaría el audioBlob a Azure Speech / SpeechSuper en producción
+  }
+});
+```
+
+Este bloque se documenta como **punto de extensión**; no es obligatorio integrarlo en la etapa 1.
+
+---
+
+## 7. Criterios de aceptación
+
+- [ ] Al pulsar **EVALUATE SONG** aparece el panel con selector de 3 niveles (1, 2 y 3).
+- [ ] Seleccionar **Nivel 3** inicia la evaluación de pronunciación por frases.
+- [ ] Se consulta `obtener_frases.php` y se muestran, una a una, las `ingles_frase` de la canción.
+- [ ] El sistema captura la frase completa (modo continuo) y la compara con similitud.
+- [ ] Se muestra un puntaje de 0 a 100 con umbrales: acierto (>=80), aceptable (60-79), error (<60).
+- [ ] Los aciertos avanzan; los errores permiten reintentar la misma frase.
+- [ ] Se emiten eventos (`phrase-result` / `phrase-score`) para la reacción visual de neones/luces.
+- [ ] Al finalizar se emite `submit-evaluation` y se guarda en `evaluaciones_vr` con `nivel=3`.
+- [ ] Micrófono denegado / navegador sin Web Speech API muestran mensaje claro y no rompen la escena.
+- [ ] Nivel 1 (vocabulario) y Nivel 2 (palabras) siguen funcionando sin regresión.
+
+---
+
+## 8. Checklist de ejecución
+
+### Fase 1 — Preparación y análisis
+
+- [ ] 1.1 Confirmar que la tabla `frases_vr` tiene datos de `ingles_frase` para la canción de prueba.
+- [ ] 1.2 Verificar el campo `archivo_cancion` en `canciones_vr` (para mapear `archivo` → `id_cancion`).
+- [ ] 1.3 Confirmar navegador objetivo con soporte Web Speech API (Chrome/Edge).
+- [ ] 1.4 Revisar el handler del botón EVALUATE en `evaluacion-vr.js` (líneas 184-270).
+- [ ] 1.5 Coordinar con el Requerimiento 001 el selector de 3 niveles.
+
+### Fase 2 — Backend: endpoint de frases
+
+- [ ] 2.1 Crear `Proyecto/backend/modelos/frases/obtener_frases.php` (replicar `obtener_palabras.php`).
+- [ ] 2.2 Devolver `phrases[]` con `ingles_frase`, `español_frase`, `tiempo_frase`, `id_cancion`.
+- [ ] 2.3 Probar el endpoint con `archivo=StandByMe_BenEKing.mp4&debug=1`.
+- [ ] 2.4 (Recomendado) Agregar columna `nivel` a `evaluaciones_vr` y actualizar
+      `guardar_evaluacion.php` / `obtener_evaluaciones.php` para persistir/devolver `nivel`.
+- [ ] 2.5 Actualizar el volcado `english_vr.sql` con la nueva columna (si aplica).
+
+### Fase 3 — Frontend: selector de nivel (`evaluacion-vr.js`)
+
+- [ ] 3.1 Crear/ajustar los botones de nivel ("LEVEL 1", "LEVEL 2", "LEVEL 3: PHRASES") en `init()`.
+- [ ] 3.2 Almacenar `this._selectedLevel` (default `1`) y resaltar el botón seleccionado.
+- [ ] 3.3 Registrar los nuevos botones en el raycast manual de mouse (`_onPointerDown`).
+- [ ] 3.4 Ramificar el handler EVALUATE: nivel 3 → `_startPhrasePronunciation`.
+
+### Fase 4 — Frontend: flujo de pronunciación por frases (`evaluacion-vr.js`)
+
+- [ ] 4.1 Implementar `_startPhrasePronunciation(phrases)`.
+- [ ] 4.2 Implementar `_renderPhrase()` (mostrar `ingles_frase`, progreso y botón de escucha).
+- [ ] 4.3 Implementar `_startListening()` usando `SpeechRecognition` con `lang='en-US'` y `continuous=true`.
+- [ ] 4.4 Implementar `_stopListening()`.
+- [ ] 4.5 Implementar `_normalize(text)` según la sección 6.4.
+- [ ] 4.6 Implementar `_levenshtein(aTokens, bTokens)`.
+- [ ] 4.7 Implementar `_scorePhrase(transcript, expected)` y `_handlePhraseResult(transcript)`.
+- [ ] 4.8 Conectar el botón **EVALUATE** para ramificar nivel 3.
+- [ ] 4.9 Reutilizar `_saveEvaluation()` al finalizar (con `nivel=3` si aplica).
+
+### Fase 5 — Reacción visual
+
+- [ ] 5.1 Emitir `phrase-result` y `phrase-score` con el detalle del puntaje.
+- [ ] 5.2 Implementar reacción mínima en el panel (color verde/amarillo/rojo + puntaje).
+- [ ] 5.3 (Opcional) Conectar en `karaoke-vr.js` la escucha de eventos para neones/partículas/luces.
+
+### Fase 6 — Manejo de errores y UX
+
+- [ ] 6.1 Capturar `not-allowed` (micrófono denegado) y mostrar mensaje.
+- [ ] 6.2 Detectar ausencia de `SpeechRecognition` y mostrar "not supported".
+- [ ] 6.3 Manejar `no-speech` (transcripción vacía) con reintento.
+- [ ] 6.4 Mostrar la transcripción reconocida junto al puntaje.
+- [ ] 6.5 Asegurar que el panel no se rompe al cerrar o al cambiar de canción.
+
+### Fase 7 — Pruebas
+
+- [ ] 7.1 Probar Nivel 3 con "Stand By Me" (frases cortas: `Stand by me.`, `When the night has come`).
+- [ ] 7.2 Probar frases con apóstrofes/contracciones (`ain\'t`, `won’t`, `you\'re`) en canciones 2 y 3.
+- [ ] 7.3 Verificar puntajes con transcripciones ligeramente distintas (prueba de Levenshtein).
+- [ ] 7.4 Probar el flujo completo: EVALUATE SONG → Nivel 3 → pronunciar → puntuar → guardar.
+- [ ] 7.5 Verificar en `evaluaciones_vr` que se guarda `total`, `nota_evaluacion`, `terminado` y `nivel`.
+- [ ] 7.6 Probar regresión del Nivel 1 (quiz) y Nivel 2 (palabras).
+- [ ] 7.7 Probar micrófono denegado y navegador sin soporte.
+
+### Fase 8 — Documentación
+
+- [ ] 8.1 Actualizar `Proyecto/documentacion/frontend.md` con el flujo del Nivel 3.
+- [ ] 8.2 Actualizar `Proyecto/documentacion/backend.md` con el endpoint `obtener_frases.php`.
+- [ ] 8.3 Registrar este requerimiento como completado con resultados de prueba.
+
+---
+
+## 9. Referencias de código
+
+- `evaluacion-vr.js` — `schema` (3-11, incluye `phraseId`), `init()` (13), handler EVALUATE
+  (184-270), `_saveEvaluation()` (471), `_startQuiz()` (537), `_renderQuestion()` (568),
+  `_chooseOption()` (680), `_clearWords()` (740), `_loadPreviousEvaluations()` (751).
+- `karaoke-vr.js` — botón EVALUATE SONG (~1042-1064), `evaluateSong()` (1069), listener
+  `submit-evaluation` (~1125).
+- `obtener_palabras.php` — patrón a replicar para `obtener_frases.php` (query por
+  `archivo_cancion` o `titulo_cancion`+`autor_cancion`).
+- `english_vr.sql` — tabla `frases_vr` (96-102, datos 108-233), `canciones_vr` (30-46),
+  `evaluaciones_vr` (54-62).
+- `guardar_evaluacion.php` — inserta en `evaluaciones_vr`.
