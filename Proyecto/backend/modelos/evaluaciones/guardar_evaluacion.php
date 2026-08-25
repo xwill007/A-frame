@@ -39,8 +39,9 @@ $id_cancion = isset($data['id_cancion']) ? intval($data['id_cancion']) : null;
 $archivo = isset($data['archivo']) ? trim($data['archivo']) : null;
 $id_usuario = isset($data['id_usuario']) ? intval($data['id_usuario']) : 0; // default anonymous (0)
 $total = isset($data['total']) ? intval($data['total']) : null;
-$nota_evaluacion = isset($data['nota_evaluacion']) ? trim($data['nota_evaluacion']) : null; // palabra con error
+$nota_evaluacion = isset($data['nota_evaluacion']) ? trim($data['nota_evaluacion']) : null; // palabra(s) con error
 $terminado = isset($data['terminado']) ? (intval($data['terminado']) ? 1 : 0) : 0;
+$nivel = isset($data['nivel']) ? intval($data['nivel']) : 1; // 1 = Vocabulario, 2 = Pronunciación
 
 // validar datos mínimos
 if ($total === null) {
@@ -74,6 +75,7 @@ $createSql = "CREATE TABLE IF NOT EXISTS `evaluaciones_vr` (
     `total` INT NOT NULL DEFAULT 0,
     `nota_evaluacion` TEXT NULL,
     `terminado` TINYINT(1) NOT NULL DEFAULT 0,
+    `nivel` TINYINT(1) UNSIGNED NOT NULL DEFAULT 1,
     `fecha_hora` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`id_evaluacion`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
@@ -83,12 +85,12 @@ if (!$conn->query($createSql)) {
 }
 
 // insertar registro
-$stmt = $conn->prepare("INSERT INTO evaluaciones_vr (id_cancion, id_usuario, total, nota_evaluacion, terminado) VALUES (?, ?, ?, ?, ?)");
+$stmt = $conn->prepare("INSERT INTO evaluaciones_vr (id_cancion, id_usuario, total, nota_evaluacion, terminado, nivel) VALUES (?, ?, ?, ?, ?, ?)");
 if (!$stmt) {
     respond(500, ['status' => 'error', 'message' => 'Prepare failed: ' . $conn->error]);
 }
 
-$stmt->bind_param('iiisi', $id_cancion, $id_usuario, $total, $nota_evaluacion, $terminado);
+$stmt->bind_param('iiisii', $id_cancion, $id_usuario, $total, $nota_evaluacion, $terminado, $nivel);
 
 if (!$stmt->execute()) {
     respond(500, ['status' => 'error', 'message' => 'Execute failed: ' . $stmt->error]);

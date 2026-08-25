@@ -99,7 +99,10 @@ Tabla `palabras_vr` (campos usados en el Nivel 2):
   (minúsculas, sin puntuación, contracciones, espacios) y determinar acierto/error.
 - **RF-8 — Retroalimentación visual.** Mostrar correcto (verde) / incorrecto (rojo) y la
   transcripción reconocida. Avanzar a la siguiente palabra al acertar.
-- **RF-9 — Reintento.** Si falla, permitir reintentar la misma palabra (o reiniciar, según criterio).
+- **RF-9 — Reintento.** Si falla, permitir reintentar la misma palabra hasta un número máximo de
+  intentos configurable por atributo del componente (`pronMaxAttempts`, **por defecto 2**). Al
+  agotar los intentos sin acertar, la palabra se registra como incorrecta y se avanza
+  automáticamente a la siguiente.
 - **RF-10 — Finalización.** Al terminar, emitir `submit-evaluation` y guardar en
   `evaluaciones_vr` el total de aciertos, la palabra fallida (`nota_evaluacion`) y `terminado=1`.
 - **RF-11 — Manejo de errores.** Micrófono denegado, reconocimiento no disponible, y transcripción
@@ -173,7 +176,8 @@ Panel evaluacion-vr
   - `_renderPronunciation()` — muestra `ing_palabra` actual y botón de escucha.
   - `_startListening()` — crea/configura el `SpeechRecognition` y lo arranca.
   - `_normalize(text)` — normalización de cadenas.
-  - `_handlePronunciationResult(transcript)` — compara y decide avanzar/reintentar.
+  - `_handlePronunciationResult(transcript)` — compara y decide avanzar/reintentar, respetando el
+    tope `pronMaxAttempts` (atributo del schema, por defecto `2`).
 - Reutilizar `_saveEvaluation()` para persistir el resultado.
 
 **`english-vr/VR/componentes/evaluacion-vr/evaluacion-vr.html`** (opcional):
@@ -261,7 +265,8 @@ reconocedor devuelve frases más largas que la palabra objetivo.
 - [ ] 4.2 Implementar `_renderPronunciation()` (mostrar `ing_palabra`, progreso y botón de escucha).
 - [ ] 4.3 Implementar `_startListening()` usando `SpeechRecognition` con `lang='en-US'`.
 - [ ] 4.4 Implementar `_normalize(text)` según la sección 6.4.
-- [ ] 4.5 Implementar `_handlePronunciationResult(transcript)` (acierto → avanzar; error → reintentar).
+- [ ] 4.5 Implementar `_handlePronunciationResult(transcript)` (acierto → avanzar; error → reintentar
+      hasta `pronMaxAttempts`, por defecto 2, y luego avanzar registrando el fallo).
 - [ ] 4.6 Conectar el botón **EVALUATE** para ramificar: nivel 1 → `_startQuiz`, nivel 2 →
       `_startPronunciation`.
 - [ ] 4.7 Reutilizar `_saveEvaluation()` al finalizar el Nivel 2.

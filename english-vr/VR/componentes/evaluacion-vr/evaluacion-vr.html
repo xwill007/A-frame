@@ -9,9 +9,10 @@
     <link rel="stylesheet" href="evaluacion-vr.css" />
 </head>
 <body>
+    <!-- Selecciona LEVEL 2 en el panel para probar el flujo de pronunciación (Web Speech API, requiere Chrome/Edge y micrófono). -->
     <a-scene background="color: #020214">
         <a-entity position="0 1.6 0">
-            <a-entity evaluacion-vr="songTitle: StandByMe.mp4; artist: Ben E. King; position: -1 1.8 -2; visible: true">
+            <a-entity evaluacion-vr="songTitle: StandByMe.mp4; artist: Ben E. King; position: -1 1.8 -2; visible: true; passingThreshold: 0.8">
             </a-entity>
         </a-entity>
         <a-entity camera look-controls position="0 1.6 3"></a-entity>

@@ -58,6 +58,7 @@ CREATE TABLE `evaluaciones_vr` (
   `total` int(11) NOT NULL DEFAULT 0,
   `nota_evaluacion` text DEFAULT NULL,
   `terminado` tinyint(1) NOT NULL DEFAULT 0,
+  `nivel` tinyint(1) UNSIGNED NOT NULL DEFAULT 1,
   `fecha_hora` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

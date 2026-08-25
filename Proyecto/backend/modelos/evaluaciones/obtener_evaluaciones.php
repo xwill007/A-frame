@@ -48,7 +48,7 @@ if (($id_cancion === null || $id_cancion === 0) && $archivo) {
 }
 
 // Build base query
-$sql = "SELECT id_evaluacion, id_cancion, id_usuario, total, nota_evaluacion, terminado, fecha_hora FROM evaluaciones_vr WHERE id_usuario = '$id_usuario' and id_cancion = '$id_cancion' ";
+$sql = "SELECT id_evaluacion, id_cancion, id_usuario, total, nota_evaluacion, terminado, nivel, fecha_hora FROM evaluaciones_vr WHERE id_usuario = '$id_usuario' and id_cancion = '$id_cancion' ";
 $params = [];
 $types = '';
 
@@ -96,6 +96,7 @@ if ($res) {
             'total' => (int)$r['total'],
             'nota_evaluacion' => $r['nota_evaluacion'],
             'terminado' => (int)$r['terminado'],
+            'nivel' => (int)$r['nivel'],
             'fecha_hora' => $r['fecha_hora']
         ];
     }
