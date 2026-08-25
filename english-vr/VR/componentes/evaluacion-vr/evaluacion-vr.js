@@ -164,7 +164,7 @@ AFRAME.registerComponent('evaluacion-vr', {
 
         //label for input
         const inputLabel = document.createElement('a-text');
-        inputLabel.setAttribute('value', '1:EASY, 2:PRONUNCIATION, 3:HARD');
+        inputLabel.setAttribute('value', '1:VOCAB, 2:WORDS, 3:PHRASES');
         inputLabel.setAttribute('align', 'center');
         inputLabel.setAttribute('color', '#ffffff');
         inputLabel.setAttribute('width', data.width - 0.9);
@@ -198,25 +198,29 @@ AFRAME.registerComponent('evaluacion-vr', {
                 setTimeout(() => evalBtn.setAttribute('color', prev), 300);
                 return;
             }
-            // cuando hay selección: obtener palabras desde el backend y mostrarlas
+            // cuando hay selección: obtener palabras (Nivel 1/2) o frases (Nivel 3) desde el backend
             const payload = { rating: this._selected, level: this._selectedLevel, songTitle: data.songTitle, artist: data.artist };
-            // send songTitle + author so backend can lookup id_cancion and return related words
-            const songTitleParam = encodeURIComponent(data.songTitle || '');
+            // send songTitle + author so backend can lookup id_cancion and return related content
             const authorParam = encodeURIComponent(data.artist || '');
             const archivoParam = encodeURIComponent(data.songTitle || '');
-            const url = `/A-frame/Proyecto/backend/modelos/palabras/obtener_palabras.php?archivo=${archivoParam}&author=${authorParam}&debug=1`;
+            const isPhraseLevel = (this._selectedLevel === 3);
+            const endpoint = isPhraseLevel
+                ? 'Proyecto/backend/modelos/frases/obtener_frases.php'
+                : 'Proyecto/backend/modelos/palabras/obtener_palabras.php';
+            const url = `/A-frame/${endpoint}?archivo=${archivoParam}&author=${authorParam}&debug=1`;
+            const itemLabel = isPhraseLevel ? 'phrases' : 'words';
 
             // mostrar indicador de carga
             this._clearWords();
             const loading = document.createElement('a-text');
-            loading.setAttribute('value', 'Loading words...');
+            loading.setAttribute('value', `Loading ${itemLabel}...`);
             loading.setAttribute('align', 'left');
             loading.setAttribute('color', '#ffffcc');
             loading.setAttribute('width', data.width - 0.9);
             loading.setAttribute('position', `-${data.width/2 - 0.12} ${-0.75} 0.01`);
             this._wordsContainer.appendChild(loading);
-            console.log('Evaluate song requested for:', data.songTitle, data.artist, 'phraseId:', data.phraseId);
-            console.log('Fetching words from URL:', url);
+            console.log('Evaluate song requested for:', data.songTitle, data.artist, 'level:', this._selectedLevel);
+            console.log('Fetching', itemLabel, 'from URL:', url);
 
             fetch(url, { credentials: 'same-origin' })
                 .then(r => {
@@ -229,10 +233,14 @@ AFRAME.registerComponent('evaluacion-vr', {
                         try { this._wordsContainer.removeChild(loading); } catch(e){}
                     }
 
-                    if (!json || (json.status && json.status !== 'success')) {
-                        console.warn('API returned no words or error:', json);
+                    const items = json && (json.status === 'success' || !json.status)
+                        ? (isPhraseLevel ? (json.phrases || []) : (json.words || []))
+                        : [];
+
+                    if (!json || (json.status && json.status !== 'success') || !items.length) {
+                        console.warn(`API returned no ${itemLabel} or error:`, json);
                         const err = document.createElement('a-text');
-                        err.setAttribute('value', 'No words found');
+                        err.setAttribute('value', `No ${itemLabel} found`);
                         err.setAttribute('align', 'left');
                         err.setAttribute('color', '#ffcccc');
                         err.setAttribute('width', data.width - 0.9);
@@ -242,35 +250,26 @@ AFRAME.registerComponent('evaluacion-vr', {
                         return;
                     }
 
-                    const words = json.words || [];
-                    if (!words.length) {
-                        const err = document.createElement('a-text');
-                        err.setAttribute('value', 'No words found');
-                        err.setAttribute('align', 'left');
-                        err.setAttribute('color', '#ffcccc');
-                        err.setAttribute('width', data.width - 0.9);
-                        err.setAttribute('position', `-${data.width/2 - 0.12} ${-0.75} 0.01`);
-                        this._wordsContainer.appendChild(err);
-                        try { el.emit('submit-evaluation', payload); } catch(e){}
-                        return;
-                    }
+                    // map to simple form [{esp, ing}] (palabra o frase completa, según el nivel)
+                    const quizWords = isPhraseLevel
+                        ? items.map(p => ({ esp: p.espanol_frase || '', ing: p.ingles_frase || '' }))
+                        : items.map(w => ({ esp: w.esp_palabra || '', ing: w.ing_palabra || '' }));
 
-                    // map to simple form [{esp, ing}]
-                    const quizWords = words.map(w => ({ esp: w.esp_palabra || '', ing: w.ing_palabra || '' }));
-                    // Nivel 2: pronunciación. Nivel 1 (por defecto): quiz de traducción
-                    if (this._selectedLevel === 2) {
+                    // Nivel 2 (palabras) y Nivel 3 (frases) comparten el mismo flujo de pronunciación.
+                    // Nivel 1 (por defecto): quiz de traducción
+                    if (this._selectedLevel === 2 || this._selectedLevel === 3) {
                         this._startPronunciation(quizWords, payload);
                     } else {
                         this._startQuiz(quizWords, payload);
                     }
                 })
                 .catch(err => {
-                    console.error('Error fetching words:', err);
+                    console.error(`Error fetching ${itemLabel}:`, err);
                     if (this._wordsContainer && loading.parentNode === this._wordsContainer) {
                         try { this._wordsContainer.removeChild(loading); } catch(e){}
                     }
                     const eTxt = document.createElement('a-text');
-                    eTxt.setAttribute('value', 'Error fetching words');
+                    eTxt.setAttribute('value', `Error fetching ${itemLabel}`);
                     eTxt.setAttribute('align', 'left');
                     eTxt.setAttribute('color', '#ffaaaa');
                     eTxt.setAttribute('width', data.width - 0.9);
@@ -572,19 +571,19 @@ AFRAME.registerComponent('evaluacion-vr', {
         try { this._stopAudioMeter(); } catch(e) {}
     },
 
-    // Handle circular button selection (1, 2 or 3). Button 2 doubles as the
-    // Level 2 (Pronunciation) trigger; buttons 1 and 3 select Level 1 (Vocabulary) difficulty.
+    // Handle circular button selection (1, 2 or 3). Button 2 triggers Level 2 (word pronunciation)
+    // and button 3 triggers Level 3 (phrase pronunciation); button 1 selects Level 1 (Vocabulary).
     _selectNumber: function(n) {
         this._selected = n;
         // highlight selected button
         (this._numButtons || []).forEach((btn, idx) => {
             try { btn.setAttribute('color', (idx === (n-1)) ? '#ffcc00' : '#666666'); } catch(e){}
         });
-        this._selectLevel(n === 2 ? 2 : 1);
+        this._selectLevel(n === 2 ? 2 : (n === 3 ? 3 : 1));
     }
     ,
 
-    // Select evaluation level: 1 = Vocabulary (translation quiz), 2 = Pronunciation
+    // Select evaluation level: 1 = Vocabulary (translation quiz), 2 = Word pronunciation, 3 = Phrase pronunciation
     _selectLevel: function(n) {
         this._selectedLevel = n;
     }
@@ -1017,7 +1016,7 @@ AFRAME.registerComponent('evaluacion-vr', {
 
             if (!this._pronWords || !this._pronWords.length) {
                 const noTxt = document.createElement('a-text');
-                noTxt.setAttribute('value', 'No words available for pronunciation');
+                noTxt.setAttribute('value', 'No content available for pronunciation');
                 noTxt.setAttribute('align', 'left');
                 noTxt.setAttribute('color', '#ffcccc');
                 noTxt.setAttribute('width', this.data.width - 0.9);
@@ -1038,24 +1037,32 @@ AFRAME.registerComponent('evaluacion-vr', {
             const current = this._pronWords[idx];
             const planeW = this.data.width;
             const planeH = this.data.height;
+            const isPhrase = (this._selectedLevel === 3);
+            // Las frases (Nivel 3) pueden ocupar 2-3 líneas; reservar espacio extra debajo del
+            // texto principal para que no se solape con la instrucción y los controles.
+            const phraseGap = isPhrase ? planeH * 0.12 : 0;
             const engY = planeH * 0.18;
-            const instrY = planeH * 0.03;
-            const listenY = -planeH * 0.05;
-            const meterY = -planeH * 0.20;
-            const feedbackY = -planeH * 0.30;
-            const progY = -planeH * 0.37;
+            const instrY = planeH * 0.03 - phraseGap;
+            const listenY = -planeH * 0.05 - phraseGap;
+            const meterY = -planeH * 0.20 - phraseGap;
+            const feedbackY = -planeH * 0.30 - phraseGap;
+            const progY = -planeH * 0.37 - phraseGap;
 
             const engTxt = document.createElement('a-text');
             engTxt.setAttribute('value', current.ing || '');
             engTxt.setAttribute('align', 'center');
+            // Frases (Nivel 3) pueden ocupar varias líneas; anclar arriba para que crezcan
+            // hacia abajo en vez de re-centrarse y solaparse con el título del panel.
+            if (isPhrase) engTxt.setAttribute('baseline', 'top');
             engTxt.setAttribute('color', '#ffffff');
             engTxt.setAttribute('width', Math.max(1.0, planeW - 0.6));
             engTxt.setAttribute('position', `0 ${engY} 0.01`);
-            engTxt.setAttribute('wrap-count', '30');
+            engTxt.setAttribute('wrap-count', isPhrase ? '32' : '30');
+            if (isPhrase) engTxt.setAttribute('scale', '0.75 0.75 1');
             this._wordsContainer.appendChild(engTxt);
 
             const instrTxt = document.createElement('a-text');
-            instrTxt.setAttribute('value', 'Say the word in English');
+            instrTxt.setAttribute('value', isPhrase ? 'Say the phrase in English' : 'Say the word in English');
             instrTxt.setAttribute('align', 'center');
             instrTxt.setAttribute('color', '#cfcfcf');
             instrTxt.setAttribute('width', Math.max(1.0, planeW - 0.9));
@@ -1347,7 +1354,7 @@ AFRAME.registerComponent('evaluacion-vr', {
             const payload = this._payloadForSubmit || {};
             payload.words = this._pronWords;
             payload.archivo = this.data.songTitle || '';
-            payload.level = 2;
+            payload.level = this._selectedLevel;
             payload.correctCount = correctCount;
             payload.total = total;
             payload.percentage = percentage;
@@ -1364,7 +1371,7 @@ AFRAME.registerComponent('evaluacion-vr', {
                     // registra palabra original -> palabra captada por el reconocimiento, por cada fallo
                     nota_evaluacion: failedPairs.length ? failedPairs.map(w => `${w.ing}->${w.transcript || '?'}`).join(', ') : 'none',
                     terminado: 1,
-                    nivel: 2
+                    nivel: this._selectedLevel
                 });
             } catch(e){}
 
