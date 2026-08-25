@@ -787,13 +787,77 @@ AFRAME.registerComponent('evaluacion-vr', {
     // ---------------------------------------------------------------
 
     // Initialize pronunciation flow with the fetched words
+    // Crea (o recrea) el panel lateral derecho, dentro del mismo componente, que lista
+    // en vivo las palabras falladas del Nivel 2 (la más reciente arriba) y su contador.
+    _createFailedSidebar: function() {
+        try { if (this._failedSidebar && this._failedSidebar.parentNode) this._failedSidebar.parentNode.removeChild(this._failedSidebar); } catch(e){}
+
+        const planeW = this.data.width;
+        const planeH = this.data.height;
+        const sidebarW = 1.6;
+        const gap = 0.15;
+
+        const sidebar = document.createElement('a-entity');
+        sidebar.setAttribute('position', `${planeW / 2 + gap + sidebarW / 2} 0 0.01`);
+        this.el.appendChild(sidebar);
+
+        const bg = document.createElement('a-plane');
+        bg.setAttribute('width', sidebarW);
+        bg.setAttribute('height', planeH);
+        bg.setAttribute('color', '#2a1620');
+        bg.setAttribute('material', 'shader: flat; side: double;');
+        sidebar.appendChild(bg);
+
+        const counter = document.createElement('a-text');
+        counter.setAttribute('align', 'center');
+        counter.setAttribute('color', '#ff8888');
+        counter.setAttribute('width', sidebarW - 0.1);
+        counter.setAttribute('position', `0 ${planeH / 2 - 0.25} 0.01`);
+        counter.setAttribute('wrap-count', '18');
+        sidebar.appendChild(counter);
+        this._failedCounterTxt = counter;
+
+        const list = document.createElement('a-text');
+        list.setAttribute('align', 'left');
+        list.setAttribute('color', '#ffdddd');
+        list.setAttribute('width', sidebarW - 0.1);
+        list.setAttribute('position', `-${sidebarW / 2 - 0.12} ${planeH / 2 - 0.55} 0.02`);
+        list.setAttribute('wrap-count', '16');
+        list.setAttribute('scale', '0.8 0.8 1');
+        sidebar.appendChild(list);
+        this._failedListTxt = list;
+
+        this._failedSidebar = sidebar;
+        this._updateFailedSidebar();
+    }
+    ,
+
+    // Refresca el contador y la lista (la más reciente arriba) a partir de this._pronFailedList.
+    // Cada entrada es { ing, transcript }: la palabra esperada y lo que el reconocimiento captó.
+    _updateFailedSidebar: function() {
+        try {
+            const words = this._pronFailedList || [];
+            if (this._failedCounterTxt) this._failedCounterTxt.setAttribute('value', `Errors: ${words.length}`);
+            if (this._failedListTxt) {
+                const maxShown = 10;
+                const shown = words.slice(0, maxShown);
+                let text = shown.map((w, i) => `${i + 1}. ${w.ing}\n   (heard: ${w.transcript || '?'})`).join('\n');
+                if (words.length > maxShown) text += `\n+${words.length - maxShown} more`;
+                this._failedListTxt.setAttribute('value', text);
+            }
+        } catch(e) {}
+    }
+    ,
+
     _startPronunciation: function(words, payload) {
         this._pronWords = words || [];
         this._pronIndex = 0;
         this._pronResults = [];
+        this._pronFailedList = [];
         this._payloadForSubmit = payload || {};
         this._awaitingPronResult = false;
         this._clearWords();
+        this._createFailedSidebar();
 
         // hide selection UI so only the pronunciation flow is visible
         try {
@@ -1131,6 +1195,10 @@ AFRAME.registerComponent('evaluacion-vr', {
 
             // attempts exhausted: record as incorrect and advance
             this._pronResults.push({ ing: current.ing || '', esp: current.esp || '', correct: false, transcript: transcript || '' });
+            // agregar al inicio de la lista de errores (más reciente arriba) y refrescar el panel lateral
+            this._pronFailedList = this._pronFailedList || [];
+            this._pronFailedList.unshift({ ing: current.ing || '', transcript: transcript || '' });
+            this._updateFailedSidebar();
             this._showPronFeedback(`Incorrect (heard: "${transcript || '...'}")`, '#ffaaaa');
             setTimeout(() => {
                 this._pronIndex = idx + 1;
@@ -1154,6 +1222,8 @@ AFRAME.registerComponent('evaluacion-vr', {
             const threshold = (typeof this.data.passingThreshold === 'number') ? this.data.passingThreshold : 0.8;
             const passed = percentage >= threshold;
             const failedWords = results.filter(r => !r.correct).map(r => r.ing).filter(Boolean);
+            // Pares "palabra original -> palabra captada por el reconocimiento" para guardar en la BD
+            const failedPairs = this._pronFailedList || [];
 
             const payload = this._payloadForSubmit || {};
             payload.words = this._pronWords;
@@ -1172,7 +1242,8 @@ AFRAME.registerComponent('evaluacion-vr', {
                 this._saveEvaluation({
                     archivo: payload.archivo,
                     total: correctCount,
-                    nota_evaluacion: failedWords.length ? failedWords.join(', ') : 'none',
+                    // registra palabra original -> palabra captada por el reconocimiento, por cada fallo
+                    nota_evaluacion: failedPairs.length ? failedPairs.map(w => `${w.ing}->${w.transcript || '?'}`).join(', ') : 'none',
                     terminado: 1,
                     nivel: 2
                 });
