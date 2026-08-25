@@ -542,6 +542,8 @@ AFRAME.registerComponent('evaluacion-vr', {
         try {
             if (this._recognition) { this._recognition.onresult = null; this._recognition.onerror = null; this._recognition.onend = null; this._recognition.abort(); }
         } catch(e) {}
+        // release the microphone/audio meter if it was left open
+        try { this._stopAudioMeter(); } catch(e) {}
     },
 
     // Handle circular button selection (1, 2 or 3). Button 2 doubles as the
@@ -774,6 +776,9 @@ AFRAME.registerComponent('evaluacion-vr', {
             // clear any stored option button refs to avoid stale handles
             try { this._optionButtons = []; } catch(e){}
             try { this._pronListenBtn = null; this._pronListenTxt = null; this._pronFeedback = null; } catch(e){}
+            // the meter bars just got removed from the DOM along with the rest of wordsContainer;
+            // stop the mic/analyser loop and drop the stale references
+            try { this._stopAudioMeter(); this._meterBars = []; this._meterContainer = null; } catch(e){}
         } catch(e) {}
     },
 
@@ -854,9 +859,10 @@ AFRAME.registerComponent('evaluacion-vr', {
             const planeH = this.data.height;
             const engY = planeH * 0.18;
             const instrY = planeH * 0.03;
-            const listenY = -planeH * 0.08;
-            const feedbackY = -planeH * 0.16;
-            const progY = -planeH * 0.24;
+            const listenY = -planeH * 0.05;
+            const meterY = -planeH * 0.20;
+            const feedbackY = -planeH * 0.30;
+            const progY = -planeH * 0.37;
 
             const engTxt = document.createElement('a-text');
             engTxt.setAttribute('value', current.ing || '');
@@ -895,6 +901,32 @@ AFRAME.registerComponent('evaluacion-vr', {
             this._pronListenBtn = listenBtn;
             this._pronListenTxt = listenTxt;
 
+            // Audio meter (equalizer-style bars) showing live microphone input level while listening
+            this._meterMinHeight = 0.03;
+            this._meterMaxHeight = 0.16;
+            const meterContainer = document.createElement('a-entity');
+            meterContainer.setAttribute('position', `0 ${meterY} 0.01`);
+            this._wordsContainer.appendChild(meterContainer);
+            this._meterBars = [];
+            const barCount = 9;
+            const barW = 0.09;
+            const barGap = 0.025;
+            const totalBarsW = barCount * barW + (barCount - 1) * barGap;
+            const barsStartX = -(totalBarsW / 2) + (barW / 2);
+            for (let bi = 0; bi < barCount; bi++) {
+                const bar = document.createElement('a-plane');
+                const bx = barsStartX + bi * (barW + barGap);
+                bar.setAttribute('width', barW);
+                bar.setAttribute('height', this._meterMinHeight);
+                bar.setAttribute('color', '#335577');
+                bar.setAttribute('material', 'shader: flat; side: double;');
+                bar.setAttribute('position', `${bx} ${this._meterMinHeight / 2} 0`);
+                bar._baseX = bx;
+                meterContainer.appendChild(bar);
+                this._meterBars.push(bar);
+            }
+            this._meterContainer = meterContainer;
+
             // Feedback placeholder (filled in after recognition result)
             const feedback = document.createElement('a-text');
             feedback.setAttribute('value', '');
@@ -931,6 +963,66 @@ AFRAME.registerComponent('evaluacion-vr', {
     }
     ,
 
+    // Open the microphone (independently of SpeechRecognition) and animate the equalizer bars
+    // from live frequency data, so the user gets visual confirmation the mic is picking up sound.
+    _startAudioMeter: function() {
+        try {
+            this._stopAudioMeter();
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+            navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+                this._micStream = stream;
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) { this._stopAudioMeter(); return; }
+                this._audioCtx = new AudioCtx();
+                const source = this._audioCtx.createMediaStreamSource(stream);
+                const analyser = this._audioCtx.createAnalyser();
+                analyser.fftSize = 32;
+                analyser.smoothingTimeConstant = 0.6;
+                source.connect(analyser);
+                this._analyser = analyser;
+                this._analyserData = new Uint8Array(analyser.frequencyBinCount);
+
+                this._meterInterval = setInterval(() => {
+                    const bars = this._meterBars;
+                    if (!this._analyser || !bars || !bars.length) return;
+                    this._analyser.getByteFrequencyData(this._analyserData);
+                    for (let i = 0; i < bars.length; i++) {
+                        const dataIdx = Math.floor((i / bars.length) * this._analyserData.length);
+                        const v = this._analyserData[dataIdx] / 255; // 0..1
+                        const h = this._meterMinHeight + v * (this._meterMaxHeight - this._meterMinHeight);
+                        try {
+                            bars[i].setAttribute('height', h.toFixed(3));
+                            bars[i].setAttribute('position', `${bars[i]._baseX} ${(h / 2).toFixed(3)} 0`);
+                            bars[i].setAttribute('color', v > 0.66 ? '#ff4444' : (v > 0.33 ? '#ffcc33' : '#33cc66'));
+                        } catch(e) {}
+                    }
+                }, 60);
+            }).catch((err) => {
+                console.warn('Audio meter: microphone unavailable', err);
+            });
+        } catch(e) { console.warn('startAudioMeter error', e); }
+    }
+    ,
+
+    // Stop the mic stream/analyser and reset the equalizer bars to their resting height
+    _stopAudioMeter: function() {
+        try {
+            if (this._meterInterval) { clearInterval(this._meterInterval); this._meterInterval = null; }
+            if (this._micStream) { this._micStream.getTracks().forEach(t => { try { t.stop(); } catch(e){} }); this._micStream = null; }
+            if (this._audioCtx) { try { this._audioCtx.close(); } catch(e){} this._audioCtx = null; }
+            this._analyser = null;
+            this._analyserData = null;
+            (this._meterBars || []).forEach(b => {
+                try {
+                    b.setAttribute('height', this._meterMinHeight || 0.02);
+                    b.setAttribute('position', `${b._baseX} ${(this._meterMinHeight || 0.02) / 2} 0`);
+                    b.setAttribute('color', '#335577');
+                } catch(e) {}
+            });
+        } catch(e) {}
+    }
+    ,
+
     // Start (or restart) speech recognition for the current word
     _startListening: function() {
         try {
@@ -954,6 +1046,7 @@ AFRAME.registerComponent('evaluacion-vr', {
             try { this._pronListenTxt.setAttribute('value', 'LISTENING...'); } catch(e){}
             try { this._pronListenBtn.setAttribute('color', '#337799'); } catch(e){}
             this._showPronFeedback('', '#ffffff');
+            this._startAudioMeter();
 
             recognition.onresult = (event) => {
                 const transcript = (event.results && event.results[0] && event.results[0][0]) ? event.results[0][0].transcript : '';
@@ -970,15 +1063,18 @@ AFRAME.registerComponent('evaluacion-vr', {
                 }
                 try { this._pronListenTxt.setAttribute('value', 'LISTEN'); } catch(e){}
                 try { this._pronListenBtn.setAttribute('color', '#225577'); } catch(e){}
+                this._stopAudioMeter();
             };
             recognition.onend = () => {
                 try { if (this._pronListenTxt) this._pronListenTxt.setAttribute('value', 'LISTEN'); } catch(e){}
                 try { if (this._pronListenBtn) this._pronListenBtn.setAttribute('color', '#225577'); } catch(e){}
+                this._stopAudioMeter();
             };
             recognition.start();
         } catch(e) {
             console.warn('startListening error', e);
             this._showPronFeedback('Unable to start speech recognition', '#ffaaaa');
+            this._stopAudioMeter();
         }
     }
     ,

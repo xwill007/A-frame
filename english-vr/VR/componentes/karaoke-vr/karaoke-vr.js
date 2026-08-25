@@ -205,6 +205,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Evitar manejos duplicados si un evento fue prevenido
                     if (evt && evt.defaultPrevented) return;
                     L(`Cancion Seleccionada: ${fileName} - ${artistName}`, evt && evt.type);
+                    // Resaltar en negro el botón de la canción elegida (y devolver el resto al color base)
+                    try { this._selectSongButton(button); } catch (e) {}
                     // Pasar metadata (nombre y artista) a loadVideo y activar countdown antes de play
                     // Solo para selecciones desde la lista queremos el countdown
                     try {
@@ -246,6 +248,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Guardar referencia para raycasting manual (mouse/touch)
                 if (!this._karaokeButtons) this._karaokeButtons = [];
                 this._karaokeButtons.push(button);
+                // Guardar referencia aparte (solo botones de canción) para resaltar la selección actual
+                if (!this._songButtons) this._songButtons = [];
+                this._songButtons.push(button);
             });
 
             this.el.appendChild(videoListContainer);
@@ -454,10 +459,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.el.sceneEl.addEventListener('renderstart', setupPointerRaycast);
             }
 
-            // Verificar si la propiedad visible es true y cargar el video inicial
+            // Al iniciar (o recargar el navegador), seleccionar por defecto la primera canción
+            // de la lista en vez del video genérico de `videoPath`.
             if (this.el.getAttribute('visible')) {
-                this.loadVideo(this.data.videoPath);
+                if (videos.length) {
+                    const [firstFileName, firstArtist] = videos[0].split('|');
+                    const firstArtistName = firstArtist ? firstArtist : 'Artista desconocido';
+                    try { this._selectSongButton(this._songButtons[0]); } catch (e) {}
+                    this.loadVideo(`./videos/karaoke/${firstFileName}`, { fileName: firstFileName, artistName: firstArtistName });
+                } else {
+                    this.loadVideo(this.data.videoPath);
+                }
             }
+        },
+
+        // Resalta en negro el botón de la canción actualmente seleccionada y devuelve
+        // el resto de botones de la lista a su color base (azul).
+        _selectSongButton: function (button) {
+            (this._songButtons || []).forEach((b) => {
+                try { b.setAttribute('color', (b === button) ? '#000000' : this._buttonColor); } catch (e) {}
+            });
+            this._selectedSongButton = button;
         },
 
         loadVideo: function (videoPath, meta, options) {
