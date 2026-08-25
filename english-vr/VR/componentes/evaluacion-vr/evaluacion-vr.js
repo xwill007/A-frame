@@ -362,6 +362,24 @@ AFRAME.registerComponent('evaluacion-vr', {
                         });
                     }
 
+                    // scroll buttons for the failed-words sidebar (Level 2 flow)
+                    if (this._scrollUpBtn && this._scrollUpBtn.object3D) {
+                        this._scrollUpBtn.object3D.traverse(o => {
+                            if (o.isMesh) {
+                                meshes.push(o);
+                                meshMap[o.uuid] = { type: 'scroll-up', el: this._scrollUpBtn };
+                            }
+                        });
+                    }
+                    if (this._scrollDownBtn && this._scrollDownBtn.object3D) {
+                        this._scrollDownBtn.object3D.traverse(o => {
+                            if (o.isMesh) {
+                                meshes.push(o);
+                                meshMap[o.uuid] = { type: 'scroll-down', el: this._scrollDownBtn };
+                            }
+                        });
+                    }
+
                     // option buttons (current quiz options) - created dynamically in _renderQuestion
                     (this._optionButtons || []).forEach((b, idx) => {
                         try {
@@ -403,6 +421,14 @@ AFRAME.registerComponent('evaluacion-vr', {
                             }
                             if (info.type === 'pron-listen') {
                                 try { this._startListening(); } catch(e){}
+                                return;
+                            }
+                            if (info.type === 'scroll-up') {
+                                try { this._scrollFailedList(-1); } catch(e){}
+                                return;
+                            }
+                            if (info.type === 'scroll-down') {
+                                try { this._scrollFailedList(1); } catch(e){}
                                 return;
                             }
                             if (info.type === 'option') {
@@ -789,6 +815,11 @@ AFRAME.registerComponent('evaluacion-vr', {
     // Initialize pronunciation flow with the fetched words
     // Crea (o recrea) el panel lateral derecho, dentro del mismo componente, que lista
     // en vivo las palabras falladas del Nivel 2 (la más reciente arriba) y su contador.
+    //
+    // Cada línea es una entidad <a-text> propia con una posición Y fija (en vez de un único
+    // bloque multilínea): así ninguna línea se recalcula ni se desplaza al cambiar el contenido,
+    // sea cual sea la cantidad de palabras. Cuando hay más palabras que espacios visibles,
+    // aparecen botones de scroll (▲/▼) para recorrer la lista completa.
     _createFailedSidebar: function() {
         try { if (this._failedSidebar && this._failedSidebar.parentNode) this._failedSidebar.parentNode.removeChild(this._failedSidebar); } catch(e){}
 
@@ -812,39 +843,125 @@ AFRAME.registerComponent('evaluacion-vr', {
         counter.setAttribute('align', 'center');
         counter.setAttribute('color', '#ff8888');
         counter.setAttribute('width', sidebarW - 0.1);
-        counter.setAttribute('position', `0 ${planeH / 2 - 0.25} 0.01`);
+        counter.setAttribute('position', `0 ${planeH / 2 - 0.22} 0.01`);
         counter.setAttribute('wrap-count', '18');
         sidebar.appendChild(counter);
         this._failedCounterTxt = counter;
 
-        const list = document.createElement('a-text');
-        list.setAttribute('align', 'left');
-        list.setAttribute('color', '#ffdddd');
-        list.setAttribute('width', sidebarW - 0.1);
-        list.setAttribute('position', `-${sidebarW / 2 - 0.12} ${planeH / 2 - 0.55} 0.02`);
-        list.setAttribute('wrap-count', '16');
-        list.setAttribute('scale', '0.8 0.8 1');
-        sidebar.appendChild(list);
-        this._failedListTxt = list;
+        // Franja de líneas fijas para el listado (queda espacio abajo para los botones de scroll)
+        const listTopY = planeH / 2 - 0.45;
+        const listBottomY = -planeH / 2 + 0.42;
+        const lineH = 0.16;
+        const maxVisible = Math.max(1, Math.floor((listTopY - listBottomY) / lineH) + 1);
+        this._failedMaxVisible = maxVisible;
+        this._failedListScroll = 0;
+
+        this._failedLineEls = [];
+        for (let i = 0; i < maxVisible; i++) {
+            const line = document.createElement('a-text');
+            line.setAttribute('align', 'left');
+            line.setAttribute('baseline', 'top');
+            line.setAttribute('color', '#ffdddd');
+            line.setAttribute('width', sidebarW - 0.1);
+            line.setAttribute('position', `-${sidebarW / 2 - 0.1} ${listTopY - i * lineH} 0.02`);
+            line.setAttribute('wrap-count', '20');
+            line.setAttribute('scale', '0.65 0.65 1');
+            sidebar.appendChild(line);
+            this._failedLineEls.push(line);
+        }
+
+        // Botones de scroll (solo visibles si hay más palabras de las que caben)
+        const scrollY = -planeH / 2 + 0.18;
+        const btnUp = document.createElement('a-plane');
+        btnUp.setAttribute('width', 0.32);
+        btnUp.setAttribute('height', 0.2);
+        btnUp.setAttribute('color', '#553333');
+        btnUp.setAttribute('class', 'clickable');
+        btnUp.setAttribute('position', `-0.28 ${scrollY} 0.02`);
+        btnUp.setAttribute('visible', false);
+        const btnUpTxt = document.createElement('a-text');
+        btnUpTxt.setAttribute('value', '^');
+        btnUpTxt.setAttribute('align', 'center');
+        btnUpTxt.setAttribute('color', '#ffffff');
+        btnUpTxt.setAttribute('width', 3.0);
+        btnUpTxt.setAttribute('position', '0 0 0.01');
+        btnUp.appendChild(btnUpTxt);
+        btnUp.addEventListener('click', () => this._scrollFailedList(-1));
+        sidebar.appendChild(btnUp);
+        this._scrollUpBtn = btnUp;
+
+        const btnDown = document.createElement('a-plane');
+        btnDown.setAttribute('width', 0.32);
+        btnDown.setAttribute('height', 0.2);
+        btnDown.setAttribute('color', '#553333');
+        btnDown.setAttribute('class', 'clickable');
+        btnDown.setAttribute('position', `0.28 ${scrollY} 0.02`);
+        btnDown.setAttribute('visible', false);
+        const btnDownTxt = document.createElement('a-text');
+        btnDownTxt.setAttribute('value', 'v');
+        btnDownTxt.setAttribute('align', 'center');
+        btnDownTxt.setAttribute('color', '#ffffff');
+        btnDownTxt.setAttribute('width', 3.0);
+        btnDownTxt.setAttribute('position', '0 0 0.01');
+        btnDown.appendChild(btnDownTxt);
+        btnDown.addEventListener('click', () => this._scrollFailedList(1));
+        sidebar.appendChild(btnDown);
+        this._scrollDownBtn = btnDown;
+
+        const scrollInd = document.createElement('a-text');
+        scrollInd.setAttribute('align', 'center');
+        scrollInd.setAttribute('color', '#cc9999');
+        scrollInd.setAttribute('width', sidebarW - 0.1);
+        scrollInd.setAttribute('position', `0 ${scrollY - 0.16} 0.02`);
+        scrollInd.setAttribute('wrap-count', '20');
+        scrollInd.setAttribute('scale', '0.6 0.6 1');
+        sidebar.appendChild(scrollInd);
+        this._failedScrollIndTxt = scrollInd;
 
         this._failedSidebar = sidebar;
         this._updateFailedSidebar();
     }
     ,
 
-    // Refresca el contador y la lista (la más reciente arriba) a partir de this._pronFailedList.
-    // Cada entrada es { ing, transcript }: la palabra esperada y lo que el reconocimiento captó.
+    // Mueve la ventana visible de la lista de errores (delta: -1 sube/palabras más nuevas, +1 baja)
+    _scrollFailedList: function(delta) {
+        try {
+            const total = (this._pronFailedList || []).length;
+            const maxVisible = this._failedMaxVisible || 1;
+            const maxScroll = Math.max(0, total - maxVisible);
+            const next = Math.min(maxScroll, Math.max(0, (this._failedListScroll || 0) + delta));
+            this._failedListScroll = next;
+            this._updateFailedSidebar();
+        } catch(e) {}
+    }
+    ,
+
+    // Refresca el contador y las líneas visibles (la más reciente arriba) a partir de
+    // this._pronFailedList. Cada entrada es { ing, transcript }: la palabra esperada y lo
+    // que el reconocimiento captó. Las líneas tienen posición fija; solo cambia su texto.
     _updateFailedSidebar: function() {
         try {
             const words = this._pronFailedList || [];
+            const maxVisible = this._failedMaxVisible || (this._failedLineEls || []).length || 1;
             if (this._failedCounterTxt) this._failedCounterTxt.setAttribute('value', `Errors: ${words.length}`);
-            if (this._failedListTxt) {
-                const maxShown = 10;
-                const shown = words.slice(0, maxShown);
-                let text = shown.map((w, i) => `${i + 1}. ${w.ing}\n   (heard: ${w.transcript || '?'})`).join('\n');
-                if (words.length > maxShown) text += `\n+${words.length - maxShown} more`;
-                this._failedListTxt.setAttribute('value', text);
-            }
+
+            const maxScroll = Math.max(0, words.length - maxVisible);
+            this._failedListScroll = Math.min(Math.max(0, this._failedListScroll || 0), maxScroll);
+            const start = this._failedListScroll;
+
+            (this._failedLineEls || []).forEach((lineEl, i) => {
+                const w = words[start + i];
+                try { lineEl.setAttribute('value', w ? `${start + i + 1}. ${w.ing} -> ${w.transcript || '?'}` : ''); } catch(e){}
+            });
+
+            const canScroll = words.length > maxVisible;
+            try { if (this._scrollUpBtn) this._scrollUpBtn.setAttribute('visible', canScroll); } catch(e){}
+            try { if (this._scrollDownBtn) this._scrollDownBtn.setAttribute('visible', canScroll); } catch(e){}
+            try {
+                if (this._failedScrollIndTxt) {
+                    this._failedScrollIndTxt.setAttribute('value', canScroll ? `${start + 1}-${Math.min(start + maxVisible, words.length)} / ${words.length}` : '');
+                }
+            } catch(e){}
         } catch(e) {}
     }
     ,
@@ -1195,9 +1312,11 @@ AFRAME.registerComponent('evaluacion-vr', {
 
             // attempts exhausted: record as incorrect and advance
             this._pronResults.push({ ing: current.ing || '', esp: current.esp || '', correct: false, transcript: transcript || '' });
-            // agregar al inicio de la lista de errores (más reciente arriba) y refrescar el panel lateral
+            // agregar al inicio de la lista de errores (más reciente arriba), volver al tope del
+            // scroll para que quede visible, y refrescar el panel lateral
             this._pronFailedList = this._pronFailedList || [];
             this._pronFailedList.unshift({ ing: current.ing || '', transcript: transcript || '' });
+            this._failedListScroll = 0;
             this._updateFailedSidebar();
             this._showPronFeedback(`Incorrect (heard: "${transcript || '...'}")`, '#ffaaaa');
             setTimeout(() => {
