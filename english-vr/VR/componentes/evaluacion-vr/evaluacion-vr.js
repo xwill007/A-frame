@@ -850,7 +850,7 @@ AFRAME.registerComponent('evaluacion-vr', {
         // Franja de líneas fijas para el listado (queda espacio abajo para los botones de scroll)
         const listTopY = planeH / 2 - 0.45;
         const listBottomY = -planeH / 2 + 0.42;
-        const lineH = 0.16;
+        const lineH = 0.2;
         const maxVisible = Math.max(1, Math.floor((listTopY - listBottomY) / lineH) + 1);
         this._failedMaxVisible = maxVisible;
         this._failedListScroll = 0;
@@ -1386,7 +1386,7 @@ AFRAME.registerComponent('evaluacion-vr', {
             summary.setAttribute('align', 'center');
             summary.setAttribute('color', passed ? '#aaffaa' : '#ffaaaa');
             summary.setAttribute('width', Math.max(1.0, planeW - 0.6));
-            summary.setAttribute('position', `0 ${planeH * 0.1} 0.01`);
+            summary.setAttribute('position', `0 ${planeH * 0.2} 0.01`);
             summary.setAttribute('wrap-count', '30');
             this._wordsContainer.appendChild(summary);
 
@@ -1394,9 +1394,12 @@ AFRAME.registerComponent('evaluacion-vr', {
             const missed = document.createElement('a-text');
             missed.setAttribute('value', missedText);
             missed.setAttribute('align', 'center');
+            // Anclar arriba: con muchas palabras falladas este texto puede envolver a varias
+            // líneas; sin esto, A-Frame lo re-centra y crece hacia arriba, solapando el resumen.
+            missed.setAttribute('baseline', 'top');
             missed.setAttribute('color', '#ffffff');
             missed.setAttribute('width', Math.max(1.0, planeW - 0.6));
-            missed.setAttribute('position', `0 ${-planeH * 0.05} 0.01`);
+            missed.setAttribute('position', `0 ${planeH * 0.08} 0.01`);
             missed.setAttribute('wrap-count', '40');
             this._wordsContainer.appendChild(missed);
         } catch(e) { console.warn('finishPronunciation error', e); }
