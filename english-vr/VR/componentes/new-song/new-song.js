@@ -3,19 +3,24 @@
 // Ver Requerimiento 003: english-vr/VR/Requerimientos/003-agregar-nuevas-canciones
 //
 // A-Frame no tiene entrada de texto nativa, así que este panel incluye su propio teclado
-// virtual (botones clickeables) para escribir Título/Autor/Archivo/URL de YouTube, siguiendo
-// el mismo patrón de botones que usan karaoke-vr.js y evaluacion-vr.js. También acepta el
-// teclado físico: al seleccionar un campo entra en "modo escritura" (se desactiva wasd-controls
-// de la cámara para que W/A/S/D escriban en vez de mover la escena) y captura keydown hasta que
-// se presiona ESC.
+// virtual (botones clickeables, con teclas ñ/á/é/í/ó/ú además del QWERTY) para escribir
+// Título/Autor/Archivo/URL de YouTube, siguiendo el mismo patrón de botones que usan
+// karaoke-vr.js y evaluacion-vr.js. También acepta el teclado físico: al seleccionar un campo
+// entra en "modo escritura" y captura keydown hasta que se presiona ESC (la cámara se mueve con
+// las flechas, no con WASD — ver arrow-controls en index.js — así que W/A/S/D siempre llegan al
+// formulario). Los acentos/ñ se ven correctamente gracias a la fuente MSDF personalizada
+// cargada en src/fonts.js (la fuente por defecto de A-Frame no tiene esos glifos).
 document.addEventListener('DOMContentLoaded', function () {
 
     const KEY_ROWS = [
         ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
         ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'],
-        ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', '⌫'],
+        ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'BKSP'],
         ['z', 'x', 'c', 'v', 'b', 'n', 'm', '_', '.', 'CAPS']
     ];
+
+    // Fila extra de caracteres propios del español, que no están en el QWERTY normal.
+    const ACCENT_KEYS = ['ñ', 'á', 'é', 'í', 'ó', 'ú'];
 
     const FIELDS = [
         { name: 'titulo', label: 'Titulo' },
@@ -28,7 +33,7 @@ document.addEventListener('DOMContentLoaded', function () {
         schema: {
             position: { type: 'string', default: '-9 5 0' },
             width: { type: 'number', default: 3.2 },
-            height: { type: 'number', default: 4.85 },
+            height: { type: 'number', default: 5.15 },
             textColor: { type: 'string', default: '#ffffff' },
             buttonColor: { type: 'string', default: '#0008ff' },
             backgroundColor: { type: 'string', default: '#2a2a2a' }
@@ -162,31 +167,43 @@ document.addEventListener('DOMContentLoaded', function () {
             const kbRowW = keysPerRow * keyW + (keysPerRow - 1) * keyGap;
             const kbStartX = -(kbRowW / 2) + (keyW / 2);
 
-            this._capsKeyTxt = null;
+            // Crea un botón de tecla en (kx, ky) y lo registra para click nativo + raycast manual.
+            const createKeyButton = (key, kx, ky, bgColor) => {
+                const keyBtn = document.createElement('a-plane');
+                keyBtn.setAttribute('width', keyW);
+                keyBtn.setAttribute('height', keyH);
+                keyBtn.setAttribute('color', bgColor || (key === 'CAPS' ? '#225577' : '#454545'));
+                keyBtn.setAttribute('class', 'clickable');
+                keyBtn.setAttribute('position', `${kx} ${ky} 0.01`);
+                const keyTxt = document.createElement('a-text');
+                keyTxt.setAttribute('value', key === 'CAPS' ? 'CAPS' : key.toUpperCase());
+                keyTxt.setAttribute('align', 'center');
+                keyTxt.setAttribute('color', '#ffffff');
+                keyTxt.setAttribute('width', 3.2);
+                keyTxt.setAttribute('position', '0 0 0.01');
+                keyBtn.appendChild(keyTxt);
+                const onKeyClick = () => this._handleKey(key, keyBtn);
+                keyBtn.addEventListener('click', onKeyClick);
+                this._clickableEls.push({ el: keyBtn, onClick: onKeyClick });
+                el.appendChild(keyBtn);
+                if (key === 'CAPS') this._capsKeyEl = keyBtn;
+                return keyBtn;
+            };
+
             KEY_ROWS.forEach((row) => {
                 row.forEach((key, i) => {
-                    const kx = kbStartX + i * (keyW + keyGap);
-                    const keyBtn = document.createElement('a-plane');
-                    keyBtn.setAttribute('width', keyW);
-                    keyBtn.setAttribute('height', keyH);
-                    keyBtn.setAttribute('color', key === 'CAPS' ? '#225577' : '#454545');
-                    keyBtn.setAttribute('class', 'clickable');
-                    keyBtn.setAttribute('position', `${kx} ${y} 0.01`);
-                    const keyTxt = document.createElement('a-text');
-                    keyTxt.setAttribute('value', key === 'CAPS' ? 'CAPS' : key.toUpperCase());
-                    keyTxt.setAttribute('align', 'center');
-                    keyTxt.setAttribute('color', '#ffffff');
-                    keyTxt.setAttribute('width', 3.2);
-                    keyTxt.setAttribute('position', '0 0 0.01');
-                    keyBtn.appendChild(keyTxt);
-                    const onKeyClick = () => this._handleKey(key, keyBtn);
-                    keyBtn.addEventListener('click', onKeyClick);
-                    this._clickableEls.push({ el: keyBtn, onClick: onKeyClick });
-                    el.appendChild(keyBtn);
-                    if (key === 'CAPS') this._capsKeyEl = keyBtn;
+                    createKeyButton(key, kbStartX + i * (keyW + keyGap), y);
                 });
                 y -= (keyH + keyGap);
             });
+
+            // Fila extra: ñ/á/é/í/ó/ú, centrada (son menos teclas que una fila completa)
+            const accentRowW = ACCENT_KEYS.length * keyW + (ACCENT_KEYS.length - 1) * keyGap;
+            const accentStartX = -(accentRowW / 2) + (keyW / 2);
+            ACCENT_KEYS.forEach((key, i) => {
+                createKeyButton(key, accentStartX + i * (keyW + keyGap), y, '#334455');
+            });
+            y -= (keyH + keyGap + 0.06);
 
             // Fila final: SPACE (ancha) + CLEAR
             const spaceW = kbRowW * 0.7;
@@ -335,7 +352,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
             if (evt.key === 'Backspace') {
                 evt.preventDefault();
-                this._handleKey('⌫');
+                this._handleKey('BKSP');
                 return;
             }
             if (evt.key === ' ') {
@@ -394,7 +411,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 this._refreshFieldText(field);
                 return;
             }
-            if (key === '⌫') { // backspace
+            if (key === 'BKSP') {
                 this._values[field] = (this._values[field] || '').slice(0, -1);
                 this._refreshFieldText(field);
                 return;

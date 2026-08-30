@@ -339,8 +339,9 @@ pronunciación (Niveles 2/3), degradando la experiencia. Se deja como punto de e
   comportarse como los demás componentes de la app), posicionado al lado izquierdo del video del
   karaoke (`position` por defecto `-9 5 0`).
 - Como A-Frame no tiene entrada de texto nativa, el panel trae su propio **teclado virtual**
-  (botones `a-plane`/`a-text`: dígitos, QWERTY, `_`, `.`, `CAPS`, `SPACE`, `⌫`, `CLEAR`) — mismo
-  patrón de botones clickeables que ya usan `karaoke-vr.js` y `evaluacion-vr.js`.
+  (botones `a-plane`/`a-text`: dígitos, QWERTY, `ñ`/`á`/`é`/`í`/`ó`/`ú` en una fila aparte, `_`,
+  `.`, `CAPS`, `SPACE`, `BKSP`, `CLEAR`) — mismo patrón de botones clickeables que ya usan
+  `karaoke-vr.js` y `evaluacion-vr.js`.
 - Cuatro campos: Título, Autor, Archivo (nombre ya copiado a `videos/karaoke/`, Opción A) y URL de
   YouTube (opcional, solo para el botón **PREVIEW ON YOUTUBE** — `window.open` en pestaña nueva,
   Opción B; no descarga nada). Un campo se activa haciendo click sobre su fila; el teclado escribe
@@ -364,6 +365,27 @@ pronunciación (Niveles 2/3), degradando la experiencia. Se deja como punto de e
   cámara únicamente con las flechas. Así W/A/S/D quedan libres para escribir en el formulario sin
   mover la escena a la vez — no fue necesario un manejo especial dentro de `new-song.js` porque el
   conflicto se resolvió a nivel de la cámara.
+
+**`english-vr/VR/src/fonts.js` + `english-vr/VR/fonts/Arial-msdf.{json,png}` (NUEVO, alcance de
+toda la app, no solo `new-song`):** [implementado]
+
+- Al escribir "mañana" o mostrar cualquier canción/frase con ñ o vocales acentuadas se descubrió
+  que la fuente MSDF por defecto de A-Frame (`roboto`, `cdn.aframe.io/fonts/Roboto-msdf.json`)
+  solo cubre el rango ASCII imprimible (códigos 32-126): no tiene glifos para ñ/Ñ, á é í ó ú
+  (ni mayúsculas), ni ¿/¡. El texto con esos caracteres se veía recortado/en blanco en **toda** la
+  app (letras de canciones, traducciones, y ahora también el formulario de `new-song`), no solo
+  ahí donde se notó primero.
+- Se generó un atlas MSDF propio con `msdf-bmfont-xml` (dependencia pura JS, sin binarios
+  nativos) a partir de `C:\Windows\Fonts\arial.ttf`, con un charset ampliado: ASCII completo +
+  `áéíóúÁÉÍÓÚñÑüÜ¿¡ªº`. Los archivos resultantes se guardaron en
+  `english-vr/VR/fonts/Arial-msdf.json` y `Arial-msdf.png`.
+- `src/fonts.js` fija `AFRAME.components.text.schema.font.default` a ese atlas apenas se carga
+  A-Frame (antes de que `<a-scene>` se parsee), así que **todos** los `<a-text>` de la app usan la
+  fuente nueva por defecto sin tener que declarar `font` en cada uno. Se agregó su `<script>` en
+  `index.html` justo después de `libs/aframe.min.js`.
+- Verificado en vivo: el texto "Duración desconocida" en la lista de canciones de `karaoke-vr`
+  (que antes se veía como "Duracin desconocida", sin la "ó") ahora se muestra correctamente, sin
+  tocar ese código — confirma que el arreglo es efectivamente global.
 
 **`Proyecto/backend/modelos/frases/` y `Proyecto/backend/modelos/palabras/` (NUEVO endpoint):**
 
@@ -484,6 +506,8 @@ Ver JSON de la sección 5.1.5. El endpoint debe responder con un resumen:
   `cancion-agregada`).
 - `index.js` — componente nuevo `arrow-controls` (mueve la cámara solo con flechas); `index.html`
   usa `arrow-controls` en vez de `wasd-controls` en la cámara.
+- `src/fonts.js` + `fonts/Arial-msdf.{json,png}` — fuente MSDF por defecto de `<a-text>` con
+  soporte de ñ/acentos/¿¡ (la de A-Frame por defecto no los tiene), aplica a toda la app.
 - `registrar_canciones.php` — alta/creación de `canciones_vr` (modo `list`/`file` por nombre de
   archivo, y modo de alta explícita `titulo`/`autor`/`archivo` usado por `new-song.js`).
 - `obtener_palabras.php` / `obtener_frases.php` — patrón de consulta a replicar/reusar desde el
