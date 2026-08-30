@@ -4,7 +4,10 @@
 //
 // A-Frame no tiene entrada de texto nativa, así que este panel incluye su propio teclado
 // virtual (botones clickeables) para escribir Título/Autor/Archivo/URL de YouTube, siguiendo
-// el mismo patrón de botones que usan karaoke-vr.js y evaluacion-vr.js.
+// el mismo patrón de botones que usan karaoke-vr.js y evaluacion-vr.js. También acepta el
+// teclado físico: al seleccionar un campo entra en "modo escritura" (se desactiva wasd-controls
+// de la cámara para que W/A/S/D escriban en vez de mover la escena) y captura keydown hasta que
+// se presiona ESC.
 document.addEventListener('DOMContentLoaded', function () {
 
     const KEY_ROWS = [
@@ -25,7 +28,7 @@ document.addEventListener('DOMContentLoaded', function () {
         schema: {
             position: { type: 'string', default: '-9 5 0' },
             width: { type: 'number', default: 3.2 },
-            height: { type: 'number', default: 4.6 },
+            height: { type: 'number', default: 4.85 },
             textColor: { type: 'string', default: '#ffffff' },
             buttonColor: { type: 'string', default: '#0008ff' },
             backgroundColor: { type: 'string', default: '#2a2a2a' }
@@ -40,6 +43,7 @@ document.addEventListener('DOMContentLoaded', function () {
             this._values = { titulo: '', autor: '', archivo: '', youtubeUrl: '' };
             this._activeField = 'titulo';
             this._caps = false;
+            this._typingMode = false; // true mientras se captura el teclado físico
             this._clickableEls = []; // { el, onClick } para el raycast manual de mouse
 
             const planeW = data.width;
@@ -62,7 +66,18 @@ document.addEventListener('DOMContentLoaded', function () {
             title.setAttribute('width', planeW);
             title.setAttribute('position', `0 ${y} 0.01`);
             el.appendChild(title);
-            y -= 0.34;
+            y -= 0.28;
+
+            const hint = document.createElement('a-text');
+            hint.setAttribute('value', 'Click en un campo y escribe con el teclado fisico o los botones. ESC suelta el teclado (camara con WASD).');
+            hint.setAttribute('align', 'center');
+            hint.setAttribute('color', '#888888');
+            hint.setAttribute('width', planeW - 0.3);
+            hint.setAttribute('wrap-count', '44');
+            hint.setAttribute('scale', '0.55 0.55 1');
+            hint.setAttribute('position', `0 ${y} 0.01`);
+            el.appendChild(hint);
+            y -= 0.24;
 
             // --- Campos de texto (clickeables para seleccionarlos, se escriben con el teclado de abajo) ---
             this._fieldEls = {};
@@ -227,7 +242,7 @@ document.addEventListener('DOMContentLoaded', function () {
             submitTxt.setAttribute('width', 3.0);
             submitTxt.setAttribute('position', '0 0 0.01');
             submitBtn.appendChild(submitTxt);
-            const onSubmitClick = () => this._saveSong(submitBtn);
+            const onSubmitClick = () => this._saveSong();
             submitBtn.addEventListener('click', onSubmitClick);
             this._clickableEls.push({ el: submitBtn, onClick: onSubmitClick });
             el.appendChild(submitBtn);
@@ -281,15 +296,76 @@ document.addEventListener('DOMContentLoaded', function () {
                 };
                 window.addEventListener('pointerdown', this._onPointerDown);
             } catch (e) { /* ignore */ }
+
+            // Teclado físico: solo se captura mientras this._typingMode es true (ver
+            // _setActiveField / _exitTypingMode). La cámara de la escena se mueve con las
+            // flechas (componente `arrow-controls` en index.js), no con WASD, así que letras
+            // como W/A/S/D llegan siempre al formulario sin mover nada.
+            this._onKeyDown = (evt) => this._handlePhysicalKeyDown(evt);
+            window.addEventListener('keydown', this._onKeyDown);
         },
 
         remove: function () {
             try { if (this._onPointerDown) window.removeEventListener('pointerdown', this._onPointerDown); } catch (e) {}
+            try { if (this._onKeyDown) window.removeEventListener('keydown', this._onKeyDown); } catch (e) {}
+        },
+
+        _handlePhysicalKeyDown: function (evt) {
+            // Ignorar si el foco real del navegador está en un input/textarea de otra parte de
+            // la página (no debería ocurrir en esta app, pero es una guarda barata).
+            const activeTag = document.activeElement && document.activeElement.tagName;
+            if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') return;
+
+            if (!this._typingMode) return;
+
+            if (evt.key === 'Escape') {
+                evt.preventDefault();
+                this._exitTypingMode();
+                return;
+            }
+            if (evt.key === 'Enter') {
+                evt.preventDefault();
+                this._saveSong();
+                return;
+            }
+            if (evt.key === 'Tab') {
+                evt.preventDefault();
+                this._cycleField(evt.shiftKey ? -1 : 1);
+                return;
+            }
+            if (evt.key === 'Backspace') {
+                evt.preventDefault();
+                this._handleKey('⌫');
+                return;
+            }
+            if (evt.key === ' ') {
+                evt.preventDefault();
+                this._handleKey('SPACE');
+                return;
+            }
+            // Cualquier otra tecla imprimible de un solo carácter (letras, dígitos, ñ, acentos,
+            // puntuación...). evt.key ya trae mayúsculas/minúsculas correctas según Shift.
+            if (evt.key.length === 1) {
+                evt.preventDefault();
+                this._insertChar(evt.key);
+            }
+        },
+
+        _cycleField: function (delta) {
+            const names = FIELDS.map((f) => f.name);
+            const idx = names.indexOf(this._activeField);
+            const next = names[(idx + delta + names.length) % names.length];
+            this._setActiveField(next);
         },
 
         _setActiveField: function (name) {
             this._activeField = name;
+            this._typingMode = true;
             this._refreshFieldHighlight();
+        },
+
+        _exitTypingMode: function () {
+            this._typingMode = false;
         },
 
         _refreshFieldHighlight: function () {
@@ -333,7 +409,15 @@ document.addEventListener('DOMContentLoaded', function () {
             this._refreshFieldText(field);
         },
 
-        _saveSong: function (btnEl) {
+        // Inserta un carácter tal cual (usado por el teclado físico, que ya trae la mayúscula o
+        // minúscula correcta según Shift, sin aplicar el CAPS del teclado virtual encima).
+        _insertChar: function (ch) {
+            const field = this._activeField;
+            this._values[field] = (this._values[field] || '') + ch;
+            this._refreshFieldText(field);
+        },
+
+        _saveSong: function () {
             const titulo = (this._values.titulo || '').trim();
             const autor = (this._values.autor || '').trim();
             const archivo = (this._values.archivo || '').trim();

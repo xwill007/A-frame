@@ -353,6 +353,17 @@ pronunciación (Niveles 2/3), degradando la experiencia. Se deja como punto de e
   con `raycaster="objects: .clickable"`) implementa su propio raycast manual por `pointerdown` del
   mouse, porque el `<a-cursor>` de `index.html` no usa `rayOrigin: mouse` (apunta al centro de la
   pantalla, no a la posición exacta del puntero).
+- **Teclado físico:** además de los botones, cada campo acepta tipeo real del teclado. Al hacer
+  click en un campo entra en "modo escritura" (`_typingMode`) y un listener de `keydown` en
+  `window` escribe en el campo activo (soporta letras, dígitos, acentos/ñ vía `evt.key`, sin pasar
+  por el `CAPS` del teclado virtual). `Backspace` borra, `Espacio` inserta un espacio, `Tab` /
+  `Shift+Tab` cambia de campo, `Enter` guarda, `Escape` sale del modo escritura. Fuera del modo
+  escritura el teclado físico no toca el formulario.
+- **Movimiento de cámara solo con flechas:** se quitó `wasd-controls` de la cámara en `index.html`
+  y se reemplazó por un componente nuevo, `arrow-controls` (definido en `index.js`), que mueve la
+  cámara únicamente con las flechas. Así W/A/S/D quedan libres para escribir en el formulario sin
+  mover la escena a la vez — no fue necesario un manejo especial dentro de `new-song.js` porque el
+  conflicto se resolvió a nivel de la cámara.
 
 **`Proyecto/backend/modelos/frases/` y `Proyecto/backend/modelos/palabras/` (NUEVO endpoint):**
 
@@ -468,8 +479,11 @@ Ver JSON de la sección 5.1.5. El endpoint debe responder con un resumen:
 - `karaoke-vr.js` — schema (`videoPath`/`videoList`, líneas 22-25), comentario vestigial de
   YouTube embed (línea 17), `_initSongList()` y `_buildSongListUI()` (catálogo dinámico + refresco
   en vivo por `cancion-agregada`), `loadVideo()`, `evaluateSong()`.
-- `new-song.js` — componente nuevo: panel 3D de alta manual de canciones (teclado virtual,
-  previsualización YouTube, guardado vía `registrar_canciones.php`, evento `cancion-agregada`).
+- `new-song.js` — componente nuevo: panel 3D de alta manual de canciones (teclado virtual y
+  físico, previsualización YouTube, guardado vía `registrar_canciones.php`, evento
+  `cancion-agregada`).
+- `index.js` — componente nuevo `arrow-controls` (mueve la cámara solo con flechas); `index.html`
+  usa `arrow-controls` en vez de `wasd-controls` en la cámara.
 - `registrar_canciones.php` — alta/creación de `canciones_vr` (modo `list`/`file` por nombre de
   archivo, y modo de alta explícita `titulo`/`autor`/`archivo` usado por `new-song.js`).
 - `obtener_palabras.php` / `obtener_frases.php` — patrón de consulta a replicar/reusar desde el
