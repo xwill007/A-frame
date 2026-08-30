@@ -72,226 +72,9 @@ document.addEventListener('DOMContentLoaded', function() {
             L('Color del fondo (normalizado):', backgroundColor);
             L('Color del texto (normalizado):', textColor);
 
-            // Crear contenedor para la lista de videos
-            const videoListContainer = document.createElement('a-entity');
-            videoListContainer.setAttribute('position', this.data.listPosition);
-            // Aplicar escala solicitada por el usuario (escalaLista)
-            try {
-                const listaScale = parseFloat(this.data.escalaLista) || 1.0;
-                videoListContainer.setAttribute('scale', `${listaScale} ${listaScale} ${listaScale}`);
-                this._listaScale = listaScale;
-                L('karaoke-vr: lista scale set to', listaScale);
-            } catch (e) {
-                L('karaoke-vr: failed to apply lista scale, using default 1.0', e);
-            }
-
-            // Crear fondo para la lista de videos
-            const background = document.createElement('a-plane');
-            const buttonCount = this.data.videoList.split(',').length;
-            const backgroundHeight = buttonCount * 0.8 + 1.0; // Altura ajustada para incluir el título
-            background.setAttribute('width', 4); // Ajustar el ancho del fondo
-            background.setAttribute('height', backgroundHeight); // Ajustar la altura del fondo
-            background.setAttribute('color', this._backgroundColor);
-            background.setAttribute('position', `0 ${-backgroundHeight / 2 + 0.4} -0.01`); // Centrar el fondo respecto a los botones
-
-            // Agregar título dentro del fondo
-            const title = document.createElement('a-text');
-            title.setAttribute('value', 'SONGS LIST');
-            title.setAttribute('align', 'center');
-            title.setAttribute('color', textColor);
-            title.setAttribute('width', 4); // Ajustar el ancho del texto
-            title.setAttribute('position', '0 1.35 0.1'); // Posición ajustada para estar al inicio del cuadro
-            // Aplicar escala de fuente para el título si se pasó en el schema
-            try {
-                const tScale = parseFloat(this.data.tituloFontScale) || 1.0;
-                title.setAttribute('scale', `${tScale} ${tScale} ${tScale}`);
-            } catch (e) { /* ignore */ }
-            background.appendChild(title);
-
-            // Mostrar información del usuario (nombre e id) — ubicar centrado debajo del título
-            const userInfo = document.createElement('a-text');
-            userInfo.setAttribute('value', 'User: Guest (id: 0)');
-            userInfo.setAttribute('align', 'center');
-            userInfo.setAttribute('color', textColor);
-            // ancho cercano al fondo para evitar wrapping inesperado
-            userInfo.setAttribute('width', 3.6);
-            // colocar centrado arriba del título (evitar solapamiento con la lista)
-            userInfo.setAttribute('position', '0 1.6 0.1');
-            userInfo.setAttribute('wrap-count', '24');
-            // slightly smaller so it doesn't overflow the panel and stays inside the grey box
-            userInfo.setAttribute('scale', '0.75 0.75 1');
-            background.appendChild(userInfo);
-            this._userInfoText = userInfo;
-
-            // populate user info from localStorage or session endpoint
-            try {
-                const localId = (function(){ try { return localStorage.getItem('user_id'); } catch(e){ return null; } })();
-                if (localId) {
-                    console.log('karaoke-vr: local user_id found in localStorage ->', localId);
-                    const localName = (function(){ try { return localStorage.getItem('user_name'); } catch(e){ return null; } })();
-                    this._userInfoText.setAttribute('value', `User: ${localName || 'User'} (id: ${localId})`);
-                } else {
-                    fetch('/A-frame/Proyecto/backend/modelos/usuarios/current_user.php', { credentials: 'same-origin' })
-                        .then(r => r.json())
-                        .then(j => {
-                            if (j && j.status === 'success' && j.user && j.user.id) {
-                                const uid = j.user.id;
-                                const uname = j.user.nombre || j.user.email || 'User';
-                                try { localStorage.setItem('user_id', String(uid)); console.log('karaoke-vr: saved user_id to localStorage ->', uid); } catch(e){}
-                                try { localStorage.setItem('user_name', String(uname)); console.log('karaoke-vr: saved user_name to localStorage ->', uname); } catch(e){}
-                                this._userInfoText.setAttribute('value', `User: ${uname} (id: ${uid})`);
-                            }
-                        }).catch(e => { /* ignore */ });
-                }
-            } catch(e) { /* ignore */ }
-
-            videoListContainer.appendChild(background);
-
-            // Ajustar la lógica para incluir la duración del video
-            const videos = this.data.videoList.split(',');
-            videos.forEach((video, index) => {
-                const [fileName, artist, duration] = video.split('|');
-
-                // Verificar si el nombre del artista y la duración están definidos
-                const artistName = artist ? artist : 'Artista desconocido';
-                const videoDuration = duration ? duration : 'Duración desconocida';
-
-                // Crear cuadro para el botón
-                const button = document.createElement('a-plane');
-                button.setAttribute('width', 3.5); // Ajustar el ancho del cuadro
-                button.setAttribute('height', 0.7); // Ajustar la altura del cuadro
-                button.setAttribute('color', this._buttonColor);
-                button.setAttribute('position', `0 ${-index * 0.8 - 0.5} 0`); // Ajustar posición para dar espacio al título
-                button.setAttribute('class', 'clickable');
-
-                // Crear texto para el título, artista y duración
-                // Crear un texto para la línea superior: número y título, alineado a la izquierda
-                const topText = document.createElement('a-text');
-                topText.setAttribute('value', `${index + 1}. ${fileName}`);
-                topText.setAttribute('align', 'left');
-                topText.setAttribute('color', textColor);
-                topText.setAttribute('width', 2.6); // ancho disponible dentro del botón
-                // posicionar hacia la izquierda dentro del plano (x negativo)
-                // Ajustar margen izquierdo (x) más cerca del centro para reducir el padding
-                topText.setAttribute('position', `-1.5 0.1 0.1`);
-                // reducir ligeramente el tamaño para que quepa bien
-                topText.setAttribute('wrap-count', '30');
-                // aplicar escala de fuente para título de item
-                let iScale = 1.0;
-                try {
-                    iScale = parseFloat(this.data.itemFontScale) || 1.0;
-                    topText.setAttribute('scale', `${iScale} ${iScale} ${iScale}`);
-                } catch (e) { /* ignore */ }
-
-                // Crear un texto para la línea inferior: artista y duración, alineado a la izquierda
-                const bottomText = document.createElement('a-text');
-                bottomText.setAttribute('value', `${artistName} (${videoDuration})`);
-                bottomText.setAttribute('align', 'left');
-                bottomText.setAttribute('color', textColor);
-                bottomText.setAttribute('width', 2.6);
-                // aplicar la misma posición X reducida para el texto inferior (artista/duración)
-                bottomText.setAttribute('position', `-1.5 -0.18 0.1`);
-                bottomText.setAttribute('wrap-count', '40');
-                // aplicar la misma escala de fuente que el título de item (artista mismo tamaño)
-                try {
-                    bottomText.setAttribute('scale', `${iScale} ${iScale} ${iScale}`);
-                } catch (e) { /* ignore */ }
-
-                // Hacer el botón accesible por teclado
-                button.setAttribute('tabindex', '0');
-
-                // Función única que activa la selección desde cualquier fuente de entrada
-                const activateSelection = (evt) => {
-                    // Evitar manejos duplicados si un evento fue prevenido
-                    if (evt && evt.defaultPrevented) return;
-                    L(`Cancion Seleccionada: ${fileName} - ${artistName}`, evt && evt.type);
-                    // Resaltar en negro el botón de la canción elegida (y devolver el resto al color base)
-                    try { this._selectSongButton(button); } catch (e) {}
-                    // Pasar metadata (nombre y artista) a loadVideo y activar countdown antes de play
-                    // Solo para selecciones desde la lista queremos el countdown
-                    try {
-                        this.loadVideo(`./videos/karaoke/${fileName}`, { fileName, artistName }, { countdown: true });
-                    } catch (e) {
-                        // fallback sin opciones
-                        this.loadVideo(`./videos/karaoke/${fileName}`, { fileName, artistName });
-                    }
-                };
-
-                // Añadir listeners para varios tipos de entrada: mouse, touch, y eventos típicos de controles VR/hand
-                const inputEvents = [
-                    'click',
-                    'mousedown',
-                    'touchstart',
-                    // Eventos emitidos por controladores VR (nombres comunes según plataformas)
-                    'triggerdown',
-                    'gripdown',
-                    'abuttondown',
-                    'xbuttondown',
-                    'ybuttondown'
-                ];
-                inputEvents.forEach((ev) => button.addEventListener(ev, activateSelection));
-
-                // Soporte de teclado (Enter / Space) cuando el plano recibe foco
-                button.addEventListener('keydown', (e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        activateSelection(e);
-                    }
-                });
-                // Guardar referencia a la función de activación en el propio elemento para uso por raycast manual
-                button._activateSelection = activateSelection;
-
-                button.appendChild(topText);
-                button.appendChild(bottomText);
-                videoListContainer.appendChild(button);
-
-                // Guardar referencia para raycasting manual (mouse/touch)
-                if (!this._karaokeButtons) this._karaokeButtons = [];
-                this._karaokeButtons.push(button);
-                // Guardar referencia aparte (solo botones de canción) para resaltar la selección actual
-                if (!this._songButtons) this._songButtons = [];
-                this._songButtons.push(button);
-            });
-
-            this.el.appendChild(videoListContainer);
-
-            // Enviar la lista de canciones al backend para registrar/actualizar
-            try {
-                // Construir array de entradas en formato "Titulo_Autor.ext"
-                const itemsForBackend = videos.map(v => {
-                    const parts = v.split('|');
-                    let fname = (parts[0] || '').trim();
-                    const artist = (parts[1] || '').trim();
-
-                    // Si el filename ya contiene '_' antes de la extensión asumimos formato Title_Author.ext
-                    const baseName = fname.replace(/^.*[\\/]/, '');
-                    if (baseName.indexOf('_') !== -1) {
-                        return baseName.replace(/\s+/g, '_');
-                    }
-
-                    // Insertar artist antes de la extensión si está disponible
-                    const dotIndex = fname.lastIndexOf('.');
-                    const nameNoExt = dotIndex !== -1 ? fname.slice(0, dotIndex) : fname;
-                    const ext = dotIndex !== -1 ? fname.slice(dotIndex) : '';
-                    const artistPart = artist ? ('_' + artist.replace(/\s+/g, '_')) : '';
-                    return (nameNoExt.replace(/\s+/g, '_') + artistPart + ext).replace(/__+/g, '_');
-                }).filter(Boolean);
-
-                if (itemsForBackend.length) {
-                    const query = encodeURIComponent(itemsForBackend.join(','));
-                    const url = '/A-frame/Proyecto/backend/modelos/canciones/registrar_canciones.php?list=' + query;
-                    // Llamada asíncrona; no bloquea la UI. Guardamos resultado en this._registeredSongs
-                    fetch(url, { method: 'GET' })
-                        .then((resp) => resp.json())
-                        .then((data) => {
-                            L('registrar_canciones:', data);
-                            if (data && data.songs) this._registeredSongs = data.songs;
-                        })
-                        .catch((err) => { W('Error registrando canciones:', err); });
-                }
-            } catch (e) {
-                W('Error preparando petición registrar_canciones:', e);
-            }
+            // Construir la lista de canciones a mostrar (desde canciones_vr en la BD, con
+            // `videoList` como respaldo) y la UI del panel karaoke completa.
+            this._initSongList();
 
             // Configurar raycasting manual para clicks del mouse/touch si no hay cursor con rayOrigin: mouse
             const setupPointerRaycast = () => {
@@ -459,6 +242,197 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.el.sceneEl.addEventListener('renderstart', setupPointerRaycast);
             }
 
+        },
+
+        // Construye el panel de la lista de canciones (fondo, título, botones) a partir de un
+        // array de entradas "archivo|autor[|duracion]" y selecciona la primera por defecto.
+        // Se llama tanto con datos de la base de datos (`canciones_vr`) como con `videoList`
+        // (schema) de respaldo si la base de datos no responde. Ver `_initSongList`.
+        _buildSongListUI: function (videos) {
+            const textColor = this._textColor;
+
+            // Crear contenedor para la lista de videos
+            const videoListContainer = document.createElement('a-entity');
+            videoListContainer.setAttribute('position', this.data.listPosition);
+            // Aplicar escala solicitada por el usuario (escalaLista)
+            try {
+                const listaScale = parseFloat(this.data.escalaLista) || 1.0;
+                videoListContainer.setAttribute('scale', `${listaScale} ${listaScale} ${listaScale}`);
+                this._listaScale = listaScale;
+                L('karaoke-vr: lista scale set to', listaScale);
+            } catch (e) {
+                L('karaoke-vr: failed to apply lista scale, using default 1.0', e);
+            }
+
+            // Crear fondo para la lista de videos
+            const background = document.createElement('a-plane');
+            const buttonCount = videos.length;
+            const backgroundHeight = buttonCount * 0.8 + 1.0; // Altura ajustada para incluir el título
+            background.setAttribute('width', 4); // Ajustar el ancho del fondo
+            background.setAttribute('height', backgroundHeight); // Ajustar la altura del fondo
+            background.setAttribute('color', this._backgroundColor);
+            background.setAttribute('position', `0 ${-backgroundHeight / 2 + 0.4} -0.01`); // Centrar el fondo respecto a los botones
+
+            // Agregar título dentro del fondo
+            const title = document.createElement('a-text');
+            title.setAttribute('value', 'SONGS LIST');
+            title.setAttribute('align', 'center');
+            title.setAttribute('color', textColor);
+            title.setAttribute('width', 4); // Ajustar el ancho del texto
+            title.setAttribute('position', '0 1.35 0.1'); // Posición ajustada para estar al inicio del cuadro
+            // Aplicar escala de fuente para el título si se pasó en el schema
+            try {
+                const tScale = parseFloat(this.data.tituloFontScale) || 1.0;
+                title.setAttribute('scale', `${tScale} ${tScale} ${tScale}`);
+            } catch (e) { /* ignore */ }
+            background.appendChild(title);
+
+            // Mostrar información del usuario (nombre e id) — ubicar centrado debajo del título
+            const userInfo = document.createElement('a-text');
+            userInfo.setAttribute('value', 'User: Guest (id: 0)');
+            userInfo.setAttribute('align', 'center');
+            userInfo.setAttribute('color', textColor);
+            // ancho cercano al fondo para evitar wrapping inesperado
+            userInfo.setAttribute('width', 3.6);
+            // colocar centrado arriba del título (evitar solapamiento con la lista)
+            userInfo.setAttribute('position', '0 1.6 0.1');
+            userInfo.setAttribute('wrap-count', '24');
+            // slightly smaller so it doesn't overflow the panel and stays inside the grey box
+            userInfo.setAttribute('scale', '0.75 0.75 1');
+            background.appendChild(userInfo);
+            this._userInfoText = userInfo;
+
+            // populate user info from localStorage or session endpoint
+            try {
+                const localId = (function(){ try { return localStorage.getItem('user_id'); } catch(e){ return null; } })();
+                if (localId) {
+                    console.log('karaoke-vr: local user_id found in localStorage ->', localId);
+                    const localName = (function(){ try { return localStorage.getItem('user_name'); } catch(e){ return null; } })();
+                    this._userInfoText.setAttribute('value', `User: ${localName || 'User'} (id: ${localId})`);
+                } else {
+                    fetch('/A-frame/Proyecto/backend/modelos/usuarios/current_user.php', { credentials: 'same-origin' })
+                        .then(r => r.json())
+                        .then(j => {
+                            if (j && j.status === 'success' && j.user && j.user.id) {
+                                const uid = j.user.id;
+                                const uname = j.user.nombre || j.user.email || 'User';
+                                try { localStorage.setItem('user_id', String(uid)); console.log('karaoke-vr: saved user_id to localStorage ->', uid); } catch(e){}
+                                try { localStorage.setItem('user_name', String(uname)); console.log('karaoke-vr: saved user_name to localStorage ->', uname); } catch(e){}
+                                this._userInfoText.setAttribute('value', `User: ${uname} (id: ${uid})`);
+                            }
+                        }).catch(e => { /* ignore */ });
+                }
+            } catch(e) { /* ignore */ }
+
+            videoListContainer.appendChild(background);
+
+            // Ajustar la lógica para incluir la duración del video
+            videos.forEach((video, index) => {
+                const [fileName, artist, duration] = video.split('|');
+
+                // Verificar si el nombre del artista y la duración están definidos
+                const artistName = artist ? artist : 'Artista desconocido';
+                const videoDuration = duration ? duration : 'Duración desconocida';
+
+                // Crear cuadro para el botón
+                const button = document.createElement('a-plane');
+                button.setAttribute('width', 3.5); // Ajustar el ancho del cuadro
+                button.setAttribute('height', 0.7); // Ajustar la altura del cuadro
+                button.setAttribute('color', this._buttonColor);
+                button.setAttribute('position', `0 ${-index * 0.8 - 0.5} 0`); // Ajustar posición para dar espacio al título
+                button.setAttribute('class', 'clickable');
+
+                // Crear texto para el título, artista y duración
+                // Crear un texto para la línea superior: número y título, alineado a la izquierda
+                const topText = document.createElement('a-text');
+                topText.setAttribute('value', `${index + 1}. ${fileName}`);
+                topText.setAttribute('align', 'left');
+                topText.setAttribute('color', textColor);
+                topText.setAttribute('width', 2.6); // ancho disponible dentro del botón
+                // posicionar hacia la izquierda dentro del plano (x negativo)
+                // Ajustar margen izquierdo (x) más cerca del centro para reducir el padding
+                topText.setAttribute('position', `-1.5 0.1 0.1`);
+                // reducir ligeramente el tamaño para que quepa bien
+                topText.setAttribute('wrap-count', '30');
+                // aplicar escala de fuente para título de item
+                let iScale = 1.0;
+                try {
+                    iScale = parseFloat(this.data.itemFontScale) || 1.0;
+                    topText.setAttribute('scale', `${iScale} ${iScale} ${iScale}`);
+                } catch (e) { /* ignore */ }
+
+                // Crear un texto para la línea inferior: artista y duración, alineado a la izquierda
+                const bottomText = document.createElement('a-text');
+                bottomText.setAttribute('value', `${artistName} (${videoDuration})`);
+                bottomText.setAttribute('align', 'left');
+                bottomText.setAttribute('color', textColor);
+                bottomText.setAttribute('width', 2.6);
+                // aplicar la misma posición X reducida para el texto inferior (artista/duración)
+                bottomText.setAttribute('position', `-1.5 -0.18 0.1`);
+                bottomText.setAttribute('wrap-count', '40');
+                // aplicar la misma escala de fuente que el título de item (artista mismo tamaño)
+                try {
+                    bottomText.setAttribute('scale', `${iScale} ${iScale} ${iScale}`);
+                } catch (e) { /* ignore */ }
+
+                // Hacer el botón accesible por teclado
+                button.setAttribute('tabindex', '0');
+
+                // Función única que activa la selección desde cualquier fuente de entrada
+                const activateSelection = (evt) => {
+                    // Evitar manejos duplicados si un evento fue prevenido
+                    if (evt && evt.defaultPrevented) return;
+                    L(`Cancion Seleccionada: ${fileName} - ${artistName}`, evt && evt.type);
+                    // Resaltar en negro el botón de la canción elegida (y devolver el resto al color base)
+                    try { this._selectSongButton(button); } catch (e) {}
+                    // Pasar metadata (nombre y artista) a loadVideo y activar countdown antes de play
+                    // Solo para selecciones desde la lista queremos el countdown
+                    try {
+                        this.loadVideo(`./videos/karaoke/${fileName}`, { fileName, artistName }, { countdown: true });
+                    } catch (e) {
+                        // fallback sin opciones
+                        this.loadVideo(`./videos/karaoke/${fileName}`, { fileName, artistName });
+                    }
+                };
+
+                // Añadir listeners para varios tipos de entrada: mouse, touch, y eventos típicos de controles VR/hand
+                const inputEvents = [
+                    'click',
+                    'mousedown',
+                    'touchstart',
+                    // Eventos emitidos por controladores VR (nombres comunes según plataformas)
+                    'triggerdown',
+                    'gripdown',
+                    'abuttondown',
+                    'xbuttondown',
+                    'ybuttondown'
+                ];
+                inputEvents.forEach((ev) => button.addEventListener(ev, activateSelection));
+
+                // Soporte de teclado (Enter / Space) cuando el plano recibe foco
+                button.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        activateSelection(e);
+                    }
+                });
+                // Guardar referencia a la función de activación en el propio elemento para uso por raycast manual
+                button._activateSelection = activateSelection;
+
+                button.appendChild(topText);
+                button.appendChild(bottomText);
+                videoListContainer.appendChild(button);
+
+                // Guardar referencia para raycasting manual (mouse/touch)
+                if (!this._karaokeButtons) this._karaokeButtons = [];
+                this._karaokeButtons.push(button);
+                // Guardar referencia aparte (solo botones de canción) para resaltar la selección actual
+                if (!this._songButtons) this._songButtons = [];
+                this._songButtons.push(button);
+            });
+
+            this.el.appendChild(videoListContainer);
+
             // Al iniciar (o recargar el navegador), seleccionar por defecto la primera canción
             // de la lista en vez del video genérico de `videoPath`.
             if (this.el.getAttribute('visible')) {
@@ -471,6 +445,65 @@ document.addEventListener('DOMContentLoaded', function() {
                     this.loadVideo(this.data.videoPath);
                 }
             }
+        },
+
+        // Consulta canciones_vr (vía registrar_canciones.php) para construir la lista de
+        // canciones desde la base de datos: así una canción agregada manualmente en la BD
+        // aparece en el karaoke sin editar `videoList`. La misma llamada registra (de forma
+        // idempotente, vía ON DUPLICATE KEY) las canciones por defecto de `videoList`, y su
+        // respuesta ya trae el listado completo actualizado de `canciones_vr`. Si la petición
+        // falla o la BD no tiene canciones, se usa `videoList` como respaldo (comportamiento
+        // anterior, sin depender del backend).
+        _initSongList: function () {
+            const fallbackVideos = this.data.videoList.split(',');
+
+            let itemsForBackend = [];
+            try {
+                // Construir array de entradas en formato "Titulo_Autor.ext"
+                itemsForBackend = fallbackVideos.map(v => {
+                    const parts = v.split('|');
+                    let fname = (parts[0] || '').trim();
+                    const artist = (parts[1] || '').trim();
+
+                    // Si el filename ya contiene '_' antes de la extensión asumimos formato Title_Author.ext
+                    const baseName = fname.replace(/^.*[\\/]/, '');
+                    if (baseName.indexOf('_') !== -1) {
+                        return baseName.replace(/\s+/g, '_');
+                    }
+
+                    // Insertar artist antes de la extensión si está disponible
+                    const dotIndex = fname.lastIndexOf('.');
+                    const nameNoExt = dotIndex !== -1 ? fname.slice(0, dotIndex) : fname;
+                    const ext = dotIndex !== -1 ? fname.slice(dotIndex) : '';
+                    const artistPart = artist ? ('_' + artist.replace(/\s+/g, '_')) : '';
+                    return (nameNoExt.replace(/\s+/g, '_') + artistPart + ext).replace(/__+/g, '_');
+                }).filter(Boolean);
+            } catch (e) {
+                W('Error preparando lista de canciones por defecto:', e);
+            }
+
+            const query = itemsForBackend.length ? ('?list=' + encodeURIComponent(itemsForBackend.join(','))) : '';
+            const url = '/A-frame/Proyecto/backend/modelos/canciones/registrar_canciones.php' + query;
+
+            fetch(url, { method: 'GET' })
+                .then((resp) => resp.json())
+                .then((data) => {
+                    L('registrar_canciones:', data);
+                    if (data && Array.isArray(data.songs) && data.songs.length) {
+                        this._registeredSongs = data.songs;
+                        // Usar el listado real de la BD (incluye canciones agregadas manualmente
+                        // en canciones_vr que no están en `videoList`).
+                        const dbVideos = data.songs.map(s => `${s.archivo_cancion}|${s.autor_cancion}`);
+                        this._buildSongListUI(dbVideos);
+                    } else {
+                        W('registrar_canciones: sin canciones en la BD, usando videoList de respaldo');
+                        this._buildSongListUI(fallbackVideos);
+                    }
+                })
+                .catch((err) => {
+                    W('Error consultando canciones desde la BD, usando videoList de respaldo:', err);
+                    this._buildSongListUI(fallbackVideos);
+                });
         },
 
         // Resalta en negro el botón de la canción actualmente seleccionada y devuelve

@@ -231,9 +231,13 @@ pronunciación (Niveles 2/3), degradando la experiencia. Se deja como punto de e
 - **RF-1 — Alta de canción con video local.** Poder copiar un `.mp4` a
   `english-vr/VR/videos/karaoke/` y registrar la fila correspondiente en `canciones_vr` (reusando
   `registrar_canciones.php`).
-- **RF-2 — Catálogo dinámico en karaoke.** `karaoke-vr.js` debe poder listar las canciones desde
+- [x] **RF-2 — Catálogo dinámico en karaoke.** `karaoke-vr.js` debe poder listar las canciones desde
   `canciones_vr` (vía un endpoint de listado) en vez de depender únicamente del `videoList`
   hardcodeado del schema, para que una canción nueva aparezca sin editar código.
+  *(Implementado: `karaoke-vr.js` llama a `registrar_canciones.php` en `init()` — la respuesta ya
+  trae el listado completo de `canciones_vr` — y construye la lista de botones desde ahí, con
+  `videoList` solo como respaldo si la petición falla o la BD está vacía. Verificado en vivo: una
+  canción "test" agregada manualmente en `canciones_vr` apareció en el panel sin tocar el código.)*
 - **RF-3 — Importación de frases/palabras.** Un script/endpoint que reciba el JSON intermedio
   (sección 5.1.5) e inserte en `frases_vr` y `palabras_vr` sin intervención manual de SQL.
 - **RF-4 — Idempotencia de la importación.** Reimportar la misma canción no debe duplicar filas
@@ -347,7 +351,7 @@ Ver JSON de la sección 5.1.5. El endpoint debe responder con un resumen:
       con una recomendación explícita y su advertencia legal.
 - [ ] Se puede copiar un `.mp4` nuevo a `english-vr/VR/videos/karaoke/` y registrarlo en
       `canciones_vr` sin editar SQL a mano (reusando o extendiendo `registrar_canciones.php`).
-- [ ] `karaoke-vr.js` muestra en su lista de canciones una canción agregada por este flujo sin
+- [x] `karaoke-vr.js` muestra en su lista de canciones una canción agregada por este flujo sin
       modificar el string `videoList` del schema.
 - [ ] Existe un endpoint/script de importación que, a partir del JSON intermedio, puebla
       `frases_vr` y `palabras_vr` sin `INSERT` manuales.
@@ -376,8 +380,16 @@ Ver JSON de la sección 5.1.5. El endpoint debe responder con un resumen:
 
 ### Fase 3 — Backend: catálogo dinámico de canciones
 
-- [ ] 3.1 Verificar/agregar modo de listado en `registrar_canciones.php`.
-- [ ] 3.2 Conectar `karaoke-vr.js` a ese listado, con `videoList` como fallback (RF-2).
+- [x] 3.1 Verificar/agregar modo de listado en `registrar_canciones.php`.
+      *(Ya existía: una petición GET sin `list`/`file`/`files` devuelve `{songs: [...]}` con todo
+      `canciones_vr`. Se reutiliza la misma llamada que registra `videoList`, que además de
+      registrar devuelve el listado completo — no hizo falta un endpoint nuevo.)*
+- [x] 3.2 Conectar `karaoke-vr.js` a ese listado, con `videoList` como fallback (RF-2).
+      *(`karaoke-vr.js`: nuevo método `_initSongList()` hace la petición y, si hay canciones en la
+      BD, llama a `_buildSongListUI(dbVideos)`; si falla o la BD está vacía, llama a
+      `_buildSongListUI(fallbackVideos)` con el `videoList` del schema. La construcción del panel
+      — antes en línea dentro de `init()` — se extrajo a `_buildSongListUI(videos)` para poder
+      llamarla desde cualquiera de las dos fuentes.)*
 
 ### Fase 4 — Extracción y formato intermedio
 
