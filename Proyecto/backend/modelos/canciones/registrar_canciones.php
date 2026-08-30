@@ -88,6 +88,49 @@ function parseFilenameToSong($filename) {
 	return ['titulo' => $title, 'autor' => $author];
 }
 
+// Modo de alta explícita: título/autor/archivo enviados por separado (usado por el
+// componente New-song). A diferencia del modo `list` (que deriva título/autor del nombre
+// de archivo), aquí el usuario los escribe directamente, así que si la canción ya existe
+// (mismo título+autor) sí actualizamos el archivo/idioma con lo que envió el usuario.
+if (isset($_REQUEST['titulo']) && isset($_REQUEST['archivo'])) {
+	$titulo = trim((string)$_REQUEST['titulo']);
+	$autor = isset($_REQUEST['autor']) ? trim((string)$_REQUEST['autor']) : '';
+	$archivo = basename(trim((string)$_REQUEST['archivo']));
+	$idioma = isset($_REQUEST['idioma']) && trim((string)$_REQUEST['idioma']) !== '' ? trim((string)$_REQUEST['idioma']) : 'ingles';
+
+	if ($titulo === '' || $archivo === '') {
+		header('Content-Type: application/json; charset=utf-8');
+		http_response_code(400);
+		echo json_encode(['error' => 'Título y archivo son obligatorios.']);
+		$conn->close();
+		exit;
+	}
+
+	$upsertSql = "INSERT INTO `" . $tableName . "` (`titulo_cancion`,`autor_cancion`,`archivo_cancion`,`idioma_cancion`) VALUES (?,?,?,?)"
+		. " ON DUPLICATE KEY UPDATE archivo_cancion = VALUES(archivo_cancion), idioma_cancion = VALUES(idioma_cancion)";
+	$stmtUpsert = $conn->prepare($upsertSql);
+	if (!$stmtUpsert) {
+		header('Content-Type: application/json; charset=utf-8');
+		http_response_code(500);
+		echo json_encode(['error' => 'Error al preparar inserción: ' . $conn->error]);
+		$conn->close();
+		exit;
+	}
+	$stmtUpsert->bind_param('ssss', $titulo, $autor, $archivo, $idioma);
+	try {
+		$stmtUpsert->execute();
+	} catch (mysqli_sql_exception $e) {
+		header('Content-Type: application/json; charset=utf-8');
+		http_response_code(500);
+		echo json_encode(['error' => 'Error al guardar la canción: ' . $e->getMessage()]);
+		$stmtUpsert->close();
+		$conn->close();
+		exit;
+	}
+	$stmtUpsert->close();
+	// Cae al bloque de abajo, que recupera y devuelve el listado completo actualizado.
+}
+
 // Recoger parámetros: soportamos GET/POST
 $inputList = null;
 if (isset($_REQUEST['list'])) {

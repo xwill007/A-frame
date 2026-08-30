@@ -76,6 +76,11 @@ document.addEventListener('DOMContentLoaded', function() {
             // `videoList` como respaldo) y la UI del panel karaoke completa.
             this._initSongList();
 
+            // Refrescar la lista cuando el componente `new-song` agrega una canción, para que
+            // aparezca sin recargar la página (ver Requerimiento 003).
+            this._onCancionAgregada = () => { L('karaoke-vr: cancion-agregada recibido, refrescando lista'); this._initSongList(); };
+            window.addEventListener('cancion-agregada', this._onCancionAgregada);
+
             // Configurar raycasting manual para clicks del mouse/touch si no hay cursor con rayOrigin: mouse
             const setupPointerRaycast = () => {
                 L('setting up pointer raycast for karaoke-vr');
@@ -250,6 +255,16 @@ document.addEventListener('DOMContentLoaded', function() {
         // (schema) de respaldo si la base de datos no responde. Ver `_initSongList`.
         _buildSongListUI: function (videos) {
             const textColor = this._textColor;
+
+            // Si ya había una lista construida (p. ej. se está refrescando tras agregar una
+            // canción nueva desde el componente `new-song`), quitar el contenedor anterior y
+            // sus botones del raycast manual antes de reconstruir, para no duplicar el panel.
+            if (this._videoListContainer) {
+                try { if (this._videoListContainer.parentNode) this._videoListContainer.parentNode.removeChild(this._videoListContainer); } catch (e) {}
+                const oldSongButtons = this._songButtons || [];
+                this._karaokeButtons = (this._karaokeButtons || []).filter((b) => oldSongButtons.indexOf(b) === -1);
+            }
+            this._songButtons = [];
 
             // Crear contenedor para la lista de videos
             const videoListContainer = document.createElement('a-entity');
@@ -432,6 +447,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             this.el.appendChild(videoListContainer);
+            this._videoListContainer = videoListContainer;
 
             // Al iniciar (o recargar el navegador), seleccionar por defecto la primera canción
             // de la lista en vez del video genérico de `videoPath`.

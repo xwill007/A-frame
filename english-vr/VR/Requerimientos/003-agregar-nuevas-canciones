@@ -228,9 +228,12 @@ pronunciación (Niveles 2/3), degradando la experiencia. Se deja como punto de e
 
 ### 6.1 Funcionales
 
-- **RF-1 — Alta de canción con video local.** Poder copiar un `.mp4` a
+- [x] **RF-1 — Alta de canción con video local.** Poder copiar un `.mp4` a
   `english-vr/VR/videos/karaoke/` y registrar la fila correspondiente en `canciones_vr` (reusando
   `registrar_canciones.php`).
+  *(Implementado con un componente nuevo, `new-song` — no estaba planeado como UI dedicada en la
+  versión original de este requerimiento, se agregó para cubrir la alta manual de forma usable.
+  Ver sección 6.3 "Componente New Song" para el detalle.)*
 - [x] **RF-2 — Catálogo dinámico en karaoke.** `karaoke-vr.js` debe poder listar las canciones desde
   `canciones_vr` (vía un endpoint de listado) en vez de depender únicamente del `videoList`
   hardcodeado del schema, para que una canción nueva aparezca sin editar código.
@@ -306,17 +309,50 @@ pronunciación (Niveles 2/3), degradando la experiencia. Se deja como punto de e
 
 ### 7.2 Componentes y archivos afectados
 
-**`english-vr/VR/componentes/karaoke-vr/karaoke-vr.js`:**
+**`english-vr/VR/componentes/karaoke-vr/karaoke-vr.js`:** [implementado]
 
 - Sustituir (o complementar) el parseo de `this.data.videoList` (línea 151) por una llamada a un
   endpoint de listado de `canciones_vr`, manteniendo `videoList` como *fallback* si la BD no
   responde (para no romper el comportamiento actual).
-- Botón/opción de previsualización (Opción B), fuera del flujo de `loadVideo()`.
+- Botón/opción de previsualización (Opción B), fuera del flujo de `loadVideo()`. *(Se implementó
+  del lado de `new-song`, no de `karaoke-vr`: ver más abajo.)*
+- Se agregó además un listener a `window` para el evento `cancion-agregada` (disparado por
+  `new-song`), que vuelve a llamar `_initSongList()` para refrescar la lista sin recargar la
+  página. `_buildSongListUI()` se hizo idempotente (quita el panel/botones anteriores antes de
+  reconstruir) para poder llamarse varias veces sin duplicar la UI.
 
-**`Proyecto/backend/modelos/canciones/registrar_canciones.php`:**
+**`Proyecto/backend/modelos/canciones/registrar_canciones.php`:** [implementado]
 
 - Confirmar/agregar un modo de **listado** (`GET` sin parámetros de alta) que `karaoke-vr.js` pueda
-  consumir para RF-2, si no lo tiene ya.
+  consumir para RF-2, si no lo tiene ya. *(Ya existía.)*
+- Se agregó un modo de **alta explícita**: `POST` con `titulo`, `autor`, `archivo` (e `idioma`
+  opcional) como campos separados — a diferencia del modo `list`/`file` (que deriva título/autor
+  del nombre de archivo), aquí el usuario los escribe directamente. Usa `INSERT ... ON DUPLICATE
+  KEY UPDATE` sobre la clave única `(titulo_cancion, autor_cancion)`, así que reenviar la misma
+  canción actualiza `archivo_cancion`/`idioma_cancion` en vez de duplicar la fila. Responde con el
+  listado completo actualizado, igual que el modo `list`.
+
+**`english-vr/VR/componentes/new-song/new-song.js` (NUEVO componente):** [implementado]
+
+- Panel **3D dentro de la escena** (no HTML/CSS superpuesto — se descartó una primera versión en
+  2D con un sidebar HTML anclado a la pantalla, a pedido explícito: el formulario debe verse y
+  comportarse como los demás componentes de la app), posicionado al lado izquierdo del video del
+  karaoke (`position` por defecto `-9 5 0`).
+- Como A-Frame no tiene entrada de texto nativa, el panel trae su propio **teclado virtual**
+  (botones `a-plane`/`a-text`: dígitos, QWERTY, `_`, `.`, `CAPS`, `SPACE`, `⌫`, `CLEAR`) — mismo
+  patrón de botones clickeables que ya usan `karaoke-vr.js` y `evaluacion-vr.js`.
+- Cuatro campos: Título, Autor, Archivo (nombre ya copiado a `videos/karaoke/`, Opción A) y URL de
+  YouTube (opcional, solo para el botón **PREVIEW ON YOUTUBE** — `window.open` en pestaña nueva,
+  Opción B; no descarga nada). Un campo se activa haciendo click sobre su fila; el teclado escribe
+  sobre el campo activo.
+- Botón **GUARDAR CANCIÓN**: `POST` a `registrar_canciones.php` (modo alta explícita); al terminar
+  emite `window.dispatchEvent(new CustomEvent('cancion-agregada'))` para que `karaoke-vr.js`
+  refresque su lista en vivo, y hace un `HEAD` best-effort a `./videos/karaoke/<archivo>` para
+  avisar (sin bloquear el guardado) si el archivo aún no fue copiado.
+- Igual que `karaoke-vr.js`/`evaluacion-vr.js`, además de los `click` nativos (para el cursor VR
+  con `raycaster="objects: .clickable"`) implementa su propio raycast manual por `pointerdown` del
+  mouse, porque el `<a-cursor>` de `index.html` no usa `rayOrigin: mouse` (apunta al centro de la
+  pantalla, no a la posición exacta del puntero).
 
 **`Proyecto/backend/modelos/frases/` y `Proyecto/backend/modelos/palabras/` (NUEVO endpoint):**
 
@@ -347,10 +383,11 @@ Ver JSON de la sección 5.1.5. El endpoint debe responder con un resumen:
 
 ## 8. Criterios de aceptación
 
-- [ ] Existe documentación clara (esta) de al menos 3 opciones para obtener/reproducir el video,
+- [x] Existe documentación clara (esta) de al menos 3 opciones para obtener/reproducir el video,
       con una recomendación explícita y su advertencia legal.
-- [ ] Se puede copiar un `.mp4` nuevo a `english-vr/VR/videos/karaoke/` y registrarlo en
+- [x] Se puede copiar un `.mp4` nuevo a `english-vr/VR/videos/karaoke/` y registrarlo en
       `canciones_vr` sin editar SQL a mano (reusando o extendiendo `registrar_canciones.php`).
+      *(Vía el componente 3D `new-song`, que llama al nuevo modo de alta explícita del endpoint.)*
 - [x] `karaoke-vr.js` muestra en su lista de canciones una canción agregada por este flujo sin
       modificar el string `videoList` del schema.
 - [ ] Existe un endpoint/script de importación que, a partir del JSON intermedio, puebla
@@ -390,6 +427,10 @@ Ver JSON de la sección 5.1.5. El endpoint debe responder con un resumen:
       `_buildSongListUI(fallbackVideos)` con el `videoList` del schema. La construcción del panel
       — antes en línea dentro de `init()` — se extrajo a `_buildSongListUI(videos)` para poder
       llamarla desde cualquiera de las dos fuentes.)*
+- [x] 3.3 Crear el componente `new-song` (panel 3D, no HTML/CSS) para la alta manual de canciones,
+      con teclado virtual propio y botón de previsualización en YouTube (Opción B). Verificado en
+      vivo: guardar una canción de prueba la insertó en `canciones_vr` y disparó el refresco en
+      vivo del panel de `karaoke-vr` (evento `cancion-agregada`), sin recargar la página.
 
 ### Fase 4 — Extracción y formato intermedio
 
@@ -425,9 +466,12 @@ Ver JSON de la sección 5.1.5. El endpoint debe responder con un resumen:
 ## 10. Referencias de código
 
 - `karaoke-vr.js` — schema (`videoPath`/`videoList`, líneas 22-25), comentario vestigial de
-  YouTube embed (línea 17), construcción de la lista de botones (76-256), `loadVideo()` (485),
-  `evaluateSong()` (1091).
-- `registrar_canciones.php` — alta/creación de `canciones_vr` (completo).
+  YouTube embed (línea 17), `_initSongList()` y `_buildSongListUI()` (catálogo dinámico + refresco
+  en vivo por `cancion-agregada`), `loadVideo()`, `evaluateSong()`.
+- `new-song.js` — componente nuevo: panel 3D de alta manual de canciones (teclado virtual,
+  previsualización YouTube, guardado vía `registrar_canciones.php`, evento `cancion-agregada`).
+- `registrar_canciones.php` — alta/creación de `canciones_vr` (modo `list`/`file` por nombre de
+  archivo, y modo de alta explícita `titulo`/`autor`/`archivo` usado por `new-song.js`).
 - `obtener_palabras.php` / `obtener_frases.php` — patrón de consulta a replicar/reusar desde el
   endpoint de importación y desde el catálogo dinámico.
 - `english_vr.sql` — `canciones_vr` (30-46), `frases_vr` (97-233), `palabras_vr` (242+).
