@@ -6,12 +6,13 @@
     <title>Mi Primera Escena VR</title>
     <!-- Cargar A-Frame localmente para evitar dependencia de internet -->
     <script src="libs/aframe.min.js"></script>
-    <script src="componentes/vr-formulario-registro/vr-formulario-registro.js"></script>
-    <script src="componentes/vr-formulario-login/vr-formulario-login.js"></script>
+    <!-- Fuente MSDF con soporte de ñ/acentos/¿¡, fija como fuente por defecto de <a-text> -->
+    <script src="src/fonts.js"></script>
     <!-- Paleta de colores para componentes VR (moved to src/) -->
     <script src="src/colors.js"></script>
     <script src="componentes/karaoke-vr/karaoke-vr.js"></script>
     <script src="componentes/evaluacion-vr/evaluacion-vr.js"></script>
+    <script src="componentes/new-song/new-song.js"></script>
     <script src="index.js"></script>
     <!-- Componente para mostrar iframes de YouTube en A-Frame -->
     <script src="https://unpkg.com/aframe-htmlembed-component/dist/aframe-htmlembed-component.min.js"></script>
@@ -34,7 +35,7 @@
         <a-entity light="type: point; position: 2 2 2; intensity: 0.5"></a-entity>
         
         <!-- Cámara con cursor -->
-        <a-entity camera look-controls wasd-controls position="0 3.0 9">
+        <a-entity camera look-controls arrow-controls position="0 3.0 9">
             <a-cursor 
                 position="0 0 -1"
                 geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
@@ -67,6 +68,14 @@
 
             <!-- Los controles de video se generan dinámicamente dentro del componente `karaoke-vr` -->
 
+        </a-entity>
+
+        <!-- Panel para agregar canciones nuevas (ver Requerimiento 003). El marcador 3D va a la
+             izquierda del video del karaoke; el formulario real vive en un panel HTML anclado al
+             borde izquierdo de la pantalla (ver componentes/new-song/new-song.js). -->
+        <a-entity
+            id="new-song-component"
+            new-song="position: -9 5 0">
         </a-entity>
 
     </a-scene>

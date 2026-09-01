@@ -7,7 +7,11 @@ AFRAME.registerComponent('evaluacion-vr', {
         width: { type: 'number', default: 3.2 },
         height: { type: 'number', default: 2.2 },
         position: { type: 'string', default: '-2 2.5 3' },
-        visible: { type: 'boolean', default: true }
+        visible: { type: 'boolean', default: true },
+        // Fraction of correct words required to pass Level 2 (Pronunciation), e.g. 0.8 = 80%
+        passingThreshold: { type: 'number', default: 0.8 },
+        // Number of attempts allowed per word (Level 2 - Pronunciation) before advancing to the next word
+        pronMaxAttempts: { type: 'int', default: 2 }
     },
 
     init: function() {
@@ -110,13 +114,17 @@ AFRAME.registerComponent('evaluacion-vr', {
         ar.setAttribute('wrap-count', '30');
         el.appendChild(ar);
 
+        // Nivel de evaluación: se deriva del botón circular elegido (ver _selectNumber).
+        // Botón 2 = Nivel 2 (Pronunciación); botones 1 y 3 = Nivel 1 (Vocabulario).
+        this._selectedLevel = 1;
+
         // mensaje de instrucción
         const instr = document.createElement('a-text');
         instr.setAttribute('value', 'Select a Difficulty Rating (1-3):');
         instr.setAttribute('align', 'center');
         instr.setAttribute('color', '#ffffff');
         instr.setAttribute('width', data.width - 0.9);
-        instr.setAttribute('position', `0 ${0.2} 0.01`);
+        instr.setAttribute('position', `0 ${0.1} 0.01`);
         instr.setAttribute('wrap-count', '30');
         el.appendChild(instr);
 
@@ -125,7 +133,7 @@ AFRAME.registerComponent('evaluacion-vr', {
 
         // Input numérico 1..3: tres botones horizontales
         const inputContainer = document.createElement('a-entity');
-        inputContainer.setAttribute('position', `0 -0.15 0.01`);
+        inputContainer.setAttribute('position', `0 -0.25 0.01`);
         el.appendChild(inputContainer);
 
     // store reference so it can be hidden when quiz begins
@@ -156,11 +164,11 @@ AFRAME.registerComponent('evaluacion-vr', {
 
         //label for input
         const inputLabel = document.createElement('a-text');
-        inputLabel.setAttribute('value', '1:EASY, 2:NORMAL, 3:HARD');
+        inputLabel.setAttribute('value', '1:VOCAB, 2:WORDS, 3:PHRASES');
         inputLabel.setAttribute('align', 'center');
         inputLabel.setAttribute('color', '#ffffff');
         inputLabel.setAttribute('width', data.width - 0.9);
-        inputLabel.setAttribute('position', `0 -0.0 0.01`);
+        inputLabel.setAttribute('position', `0 -0.10 0.01`);
         inputLabel.setAttribute('wrap-count', '30');
         el.appendChild(inputLabel);
 
@@ -182,7 +190,7 @@ AFRAME.registerComponent('evaluacion-vr', {
         evalText.setAttribute('position', '0 0 0.02');
         evalBtn.appendChild(evalText);
         evalBtn.addEventListener('click', () => {
-            // si no hay selección, indicar visualmente
+            // Requiere haber elegido uno de los botones circulares (1, 2 o 3)
             if (!this._selected) {
                 // flash the button red briefly
                 const prev = evalBtn.getAttribute('color');
@@ -190,25 +198,29 @@ AFRAME.registerComponent('evaluacion-vr', {
                 setTimeout(() => evalBtn.setAttribute('color', prev), 300);
                 return;
             }
-            // cuando hay selección: obtener palabras desde el backend y mostrarlas
-            const payload = { rating: this._selected, songTitle: data.songTitle, artist: data.artist };
-            // send songTitle + author so backend can lookup id_cancion and return related words
-            const songTitleParam = encodeURIComponent(data.songTitle || '');
+            // cuando hay selección: obtener palabras (Nivel 1/2) o frases (Nivel 3) desde el backend
+            const payload = { rating: this._selected, level: this._selectedLevel, songTitle: data.songTitle, artist: data.artist };
+            // send songTitle + author so backend can lookup id_cancion and return related content
             const authorParam = encodeURIComponent(data.artist || '');
             const archivoParam = encodeURIComponent(data.songTitle || '');
-            const url = `/A-frame/Proyecto/backend/modelos/palabras/obtener_palabras.php?archivo=${archivoParam}&author=${authorParam}&debug=1`;
+            const isPhraseLevel = (this._selectedLevel === 3);
+            const endpoint = isPhraseLevel
+                ? 'Proyecto/backend/modelos/frases/obtener_frases.php'
+                : 'Proyecto/backend/modelos/palabras/obtener_palabras.php';
+            const url = `/A-frame/${endpoint}?archivo=${archivoParam}&author=${authorParam}&debug=1`;
+            const itemLabel = isPhraseLevel ? 'phrases' : 'words';
 
             // mostrar indicador de carga
             this._clearWords();
             const loading = document.createElement('a-text');
-            loading.setAttribute('value', 'Loading words...');
+            loading.setAttribute('value', `Loading ${itemLabel}...`);
             loading.setAttribute('align', 'left');
             loading.setAttribute('color', '#ffffcc');
             loading.setAttribute('width', data.width - 0.9);
             loading.setAttribute('position', `-${data.width/2 - 0.12} ${-0.75} 0.01`);
             this._wordsContainer.appendChild(loading);
-            console.log('Evaluate song requested for:', data.songTitle, data.artist, 'phraseId:', data.phraseId);
-            console.log('Fetching words from URL:', url);
+            console.log('Evaluate song requested for:', data.songTitle, data.artist, 'level:', this._selectedLevel);
+            console.log('Fetching', itemLabel, 'from URL:', url);
 
             fetch(url, { credentials: 'same-origin' })
                 .then(r => {
@@ -221,10 +233,14 @@ AFRAME.registerComponent('evaluacion-vr', {
                         try { this._wordsContainer.removeChild(loading); } catch(e){}
                     }
 
-                    if (!json || (json.status && json.status !== 'success')) {
-                        console.warn('API returned no words or error:', json);
+                    const items = json && (json.status === 'success' || !json.status)
+                        ? (isPhraseLevel ? (json.phrases || []) : (json.words || []))
+                        : [];
+
+                    if (!json || (json.status && json.status !== 'success') || !items.length) {
+                        console.warn(`API returned no ${itemLabel} or error:`, json);
                         const err = document.createElement('a-text');
-                        err.setAttribute('value', 'No words found');
+                        err.setAttribute('value', `No ${itemLabel} found`);
                         err.setAttribute('align', 'left');
                         err.setAttribute('color', '#ffcccc');
                         err.setAttribute('width', data.width - 0.9);
@@ -234,32 +250,26 @@ AFRAME.registerComponent('evaluacion-vr', {
                         return;
                     }
 
-                    const words = json.words || [];
-                    if (!words.length) {
-                        const err = document.createElement('a-text');
-                        err.setAttribute('value', 'No words found');
-                        err.setAttribute('align', 'left');
-                        err.setAttribute('color', '#ffcccc');
-                        err.setAttribute('width', data.width - 0.9);
-                        err.setAttribute('position', `-${data.width/2 - 0.12} ${-0.75} 0.01`);
-                        this._wordsContainer.appendChild(err);
-                        try { el.emit('submit-evaluation', payload); } catch(e){}
-                        return;
-                    }
+                    // map to simple form [{esp, ing}] (palabra o frase completa, según el nivel)
+                    const quizWords = isPhraseLevel
+                        ? items.map(p => ({ esp: p.espanol_frase || '', ing: p.ingles_frase || '' }))
+                        : items.map(w => ({ esp: w.esp_palabra || '', ing: w.ing_palabra || '' }));
 
-                    // Start interactive multiple-choice quiz using fetched words
-                    // map to simple form [{esp, ing}]
-                    const quizWords = words.map(w => ({ esp: w.esp_palabra || '', ing: w.ing_palabra || '' }));
-                    // store quiz state and begin
-                    this._startQuiz(quizWords, payload);
+                    // Nivel 2 (palabras) y Nivel 3 (frases) comparten el mismo flujo de pronunciación.
+                    // Nivel 1 (por defecto): quiz de traducción
+                    if (this._selectedLevel === 2 || this._selectedLevel === 3) {
+                        this._startPronunciation(quizWords, payload);
+                    } else {
+                        this._startQuiz(quizWords, payload);
+                    }
                 })
                 .catch(err => {
-                    console.error('Error fetching words:', err);
+                    console.error(`Error fetching ${itemLabel}:`, err);
                     if (this._wordsContainer && loading.parentNode === this._wordsContainer) {
                         try { this._wordsContainer.removeChild(loading); } catch(e){}
                     }
                     const eTxt = document.createElement('a-text');
-                    eTxt.setAttribute('value', 'Error fetching words');
+                    eTxt.setAttribute('value', `Error fetching ${itemLabel}`);
                     eTxt.setAttribute('align', 'left');
                     eTxt.setAttribute('color', '#ffaaaa');
                     eTxt.setAttribute('width', data.width - 0.9);
@@ -341,6 +351,34 @@ AFRAME.registerComponent('evaluacion-vr', {
                         } catch(e) {}
                     });
 
+                    // pronunciation "LISTEN" button (Level 2 flow)
+                    if (this._pronListenBtn && this._pronListenBtn.object3D) {
+                        this._pronListenBtn.object3D.traverse(o => {
+                            if (o.isMesh) {
+                                meshes.push(o);
+                                meshMap[o.uuid] = { type: 'pron-listen', el: this._pronListenBtn };
+                            }
+                        });
+                    }
+
+                    // scroll buttons for the failed-words sidebar (Level 2 flow)
+                    if (this._scrollUpBtn && this._scrollUpBtn.object3D) {
+                        this._scrollUpBtn.object3D.traverse(o => {
+                            if (o.isMesh) {
+                                meshes.push(o);
+                                meshMap[o.uuid] = { type: 'scroll-up', el: this._scrollUpBtn };
+                            }
+                        });
+                    }
+                    if (this._scrollDownBtn && this._scrollDownBtn.object3D) {
+                        this._scrollDownBtn.object3D.traverse(o => {
+                            if (o.isMesh) {
+                                meshes.push(o);
+                                meshMap[o.uuid] = { type: 'scroll-down', el: this._scrollDownBtn };
+                            }
+                        });
+                    }
+
                     // option buttons (current quiz options) - created dynamically in _renderQuestion
                     (this._optionButtons || []).forEach((b, idx) => {
                         try {
@@ -380,22 +418,24 @@ AFRAME.registerComponent('evaluacion-vr', {
                                 try { this._selectNumber(info.index + 1); } catch(e){}
                                 return;
                             }
+                            if (info.type === 'pron-listen') {
+                                try { this._startListening(); } catch(e){}
+                                return;
+                            }
+                            if (info.type === 'scroll-up') {
+                                try { this._scrollFailedList(-1); } catch(e){}
+                                return;
+                            }
+                            if (info.type === 'scroll-down') {
+                                try { this._scrollFailedList(1); } catch(e){}
+                                return;
+                            }
                             if (info.type === 'option') {
                                 // Trigger the option button's click handler
                                 try {
                                     info.el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
                                 } catch (e) {
                                     try { this._chooseOption && this._chooseOption(info.el && info.el.value, info.el); } catch(e){}
-                                }
-                                return;
-                            }
-                            if (info.type === 'eval') {
-                                // Trigger the evaluate button's click handler as if clicked by mouse
-                                try {
-                                    // Prefer dispatching a MouseEvent so handlers expecting MouseEvent run
-                                    info.el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-                                } catch (e) {
-                                    try { info.el.click && info.el.click(); } catch (e) {}
                                 }
                                 return;
                             }
@@ -474,9 +514,10 @@ AFRAME.registerComponent('evaluacion-vr', {
             const total = Number.isFinite(info.total) ? info.total : 0;
             const nota = info.nota_evaluacion || null;
             const terminado = info.terminado ? 1 : 0;
+            const nivel = info.nivel || 1;
 
             const doPost = (idUsuario) => {
-                const body = { id_usuario: idUsuario || 0, archivo: archivo, total: total, nota_evaluacion: nota, terminado: terminado };
+                const body = { id_usuario: idUsuario || 0, archivo: archivo, total: total, nota_evaluacion: nota, terminado: terminado, nivel: nivel };
                 fetch('/A-frame/Proyecto/backend/modelos/evaluaciones/guardar_evaluacion.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -522,14 +563,29 @@ AFRAME.registerComponent('evaluacion-vr', {
         try {
             if (this._onPointerDown) window.removeEventListener('pointerdown', this._onPointerDown);
         } catch(e) {}
+        // stop any in-progress speech recognition
+        try {
+            if (this._recognition) { this._recognition.onresult = null; this._recognition.onerror = null; this._recognition.onend = null; this._recognition.abort(); }
+        } catch(e) {}
+        // release the microphone/audio meter if it was left open
+        try { this._stopAudioMeter(); } catch(e) {}
     },
 
+    // Handle circular button selection (1, 2 or 3). Button 2 triggers Level 2 (word pronunciation)
+    // and button 3 triggers Level 3 (phrase pronunciation); button 1 selects Level 1 (Vocabulary).
     _selectNumber: function(n) {
         this._selected = n;
         // highlight selected button
         (this._numButtons || []).forEach((btn, idx) => {
             try { btn.setAttribute('color', (idx === (n-1)) ? '#ffcc00' : '#666666'); } catch(e){}
         });
+        this._selectLevel(n === 2 ? 2 : (n === 3 ? 3 : 1));
+    }
+    ,
+
+    // Select evaluation level: 1 = Vocabulary (translation quiz), 2 = Word pronunciation, 3 = Phrase pronunciation
+    _selectLevel: function(n) {
+        this._selectedLevel = n;
     }
     ,
 
@@ -697,7 +753,7 @@ AFRAME.registerComponent('evaluacion-vr', {
                         try { this.el.emit('submit-evaluation', payload); } catch(e){}
 
                         // Save evaluation to backend: completed
-                        try { this._saveEvaluation({ archivo: payload.archivo, total: this._quizWords.length, nota_evaluacion: '', terminado: 1 }); } catch(e){}
+                        try { this._saveEvaluation({ archivo: payload.archivo, total: this._quizWords.length, nota_evaluacion: '', terminado: 1, nivel: 1 }); } catch(e){}
 
                         // show finished message
                         this._clearWords();
@@ -729,7 +785,7 @@ AFRAME.registerComponent('evaluacion-vr', {
                     fail.setAttribute('position', `0 ${-0.75} 0.01`);
                     this._wordsContainer.appendChild(fail);
                     // report incorrect attempt (save partial result and the wrong word)
-                    try { this._saveEvaluation({ archivo: this.data.songTitle || '', total: idx, nota_evaluacion: option, terminado: 0 }); } catch(e){}
+                    try { this._saveEvaluation({ archivo: this.data.songTitle || '', total: idx, nota_evaluacion: option, terminado: 0, nivel: 1 }); } catch(e){}
                     setTimeout(() => this._renderQuestion(), 800);
                 }, 350);
             }
@@ -744,8 +800,611 @@ AFRAME.registerComponent('evaluacion-vr', {
             }
             // clear any stored option button refs to avoid stale handles
             try { this._optionButtons = []; } catch(e){}
+            try { this._pronListenBtn = null; this._pronListenTxt = null; this._pronFeedback = null; } catch(e){}
+            // the meter bars just got removed from the DOM along with the rest of wordsContainer;
+            // stop the mic/analyser loop and drop the stale references
+            try { this._stopAudioMeter(); this._meterBars = []; this._meterContainer = null; } catch(e){}
         } catch(e) {}
     },
+
+    // ---------------------------------------------------------------
+    // Nivel 2: Evaluación de pronunciación
+    // ---------------------------------------------------------------
+
+    // Initialize pronunciation flow with the fetched words
+    // Crea (o recrea) el panel lateral derecho, dentro del mismo componente, que lista
+    // en vivo las palabras falladas del Nivel 2 (la más reciente arriba) y su contador.
+    //
+    // Cada línea es una entidad <a-text> propia con una posición Y fija (en vez de un único
+    // bloque multilínea): así ninguna línea se recalcula ni se desplaza al cambiar el contenido,
+    // sea cual sea la cantidad de palabras. Cuando hay más palabras que espacios visibles,
+    // aparecen botones de scroll (▲/▼) para recorrer la lista completa.
+    _createFailedSidebar: function() {
+        try { if (this._failedSidebar && this._failedSidebar.parentNode) this._failedSidebar.parentNode.removeChild(this._failedSidebar); } catch(e){}
+
+        const planeW = this.data.width;
+        const planeH = this.data.height;
+        const sidebarW = 1.6;
+        const gap = 0.15;
+
+        const sidebar = document.createElement('a-entity');
+        sidebar.setAttribute('position', `${planeW / 2 + gap + sidebarW / 2} 0 0.01`);
+        this.el.appendChild(sidebar);
+
+        const bg = document.createElement('a-plane');
+        bg.setAttribute('width', sidebarW);
+        bg.setAttribute('height', planeH);
+        bg.setAttribute('color', '#2a1620');
+        bg.setAttribute('material', 'shader: flat; side: double;');
+        sidebar.appendChild(bg);
+
+        const counter = document.createElement('a-text');
+        counter.setAttribute('align', 'center');
+        counter.setAttribute('color', '#ff8888');
+        counter.setAttribute('width', sidebarW - 0.1);
+        counter.setAttribute('position', `0 ${planeH / 2 - 0.22} 0.01`);
+        counter.setAttribute('wrap-count', '18');
+        sidebar.appendChild(counter);
+        this._failedCounterTxt = counter;
+
+        // Franja de líneas fijas para el listado (queda espacio abajo para los botones de scroll)
+        const listTopY = planeH / 2 - 0.45;
+        const listBottomY = -planeH / 2 + 0.42;
+        const lineH = 0.2;
+        const maxVisible = Math.max(1, Math.floor((listTopY - listBottomY) / lineH) + 1);
+        this._failedMaxVisible = maxVisible;
+        this._failedListScroll = 0;
+
+        this._failedLineEls = [];
+        for (let i = 0; i < maxVisible; i++) {
+            const line = document.createElement('a-text');
+            line.setAttribute('align', 'left');
+            line.setAttribute('baseline', 'top');
+            line.setAttribute('color', '#ffdddd');
+            line.setAttribute('width', sidebarW - 0.1);
+            line.setAttribute('position', `-${sidebarW / 2 - 0.1} ${listTopY - i * lineH} 0.02`);
+            line.setAttribute('wrap-count', '20');
+            line.setAttribute('scale', '0.65 0.65 1');
+            sidebar.appendChild(line);
+            this._failedLineEls.push(line);
+        }
+
+        // Botones de scroll (solo visibles si hay más palabras de las que caben)
+        const scrollY = -planeH / 2 + 0.18;
+        const btnUp = document.createElement('a-plane');
+        btnUp.setAttribute('width', 0.32);
+        btnUp.setAttribute('height', 0.2);
+        btnUp.setAttribute('color', '#553333');
+        btnUp.setAttribute('class', 'clickable');
+        btnUp.setAttribute('position', `-0.28 ${scrollY} 0.02`);
+        btnUp.setAttribute('visible', false);
+        const btnUpTxt = document.createElement('a-text');
+        btnUpTxt.setAttribute('value', '^');
+        btnUpTxt.setAttribute('align', 'center');
+        btnUpTxt.setAttribute('color', '#ffffff');
+        btnUpTxt.setAttribute('width', 3.0);
+        btnUpTxt.setAttribute('position', '0 0 0.01');
+        btnUp.appendChild(btnUpTxt);
+        btnUp.addEventListener('click', () => this._scrollFailedList(-1));
+        sidebar.appendChild(btnUp);
+        this._scrollUpBtn = btnUp;
+
+        const btnDown = document.createElement('a-plane');
+        btnDown.setAttribute('width', 0.32);
+        btnDown.setAttribute('height', 0.2);
+        btnDown.setAttribute('color', '#553333');
+        btnDown.setAttribute('class', 'clickable');
+        btnDown.setAttribute('position', `0.28 ${scrollY} 0.02`);
+        btnDown.setAttribute('visible', false);
+        const btnDownTxt = document.createElement('a-text');
+        btnDownTxt.setAttribute('value', 'v');
+        btnDownTxt.setAttribute('align', 'center');
+        btnDownTxt.setAttribute('color', '#ffffff');
+        btnDownTxt.setAttribute('width', 3.0);
+        btnDownTxt.setAttribute('position', '0 0 0.01');
+        btnDown.appendChild(btnDownTxt);
+        btnDown.addEventListener('click', () => this._scrollFailedList(1));
+        sidebar.appendChild(btnDown);
+        this._scrollDownBtn = btnDown;
+
+        const scrollInd = document.createElement('a-text');
+        scrollInd.setAttribute('align', 'center');
+        scrollInd.setAttribute('color', '#cc9999');
+        scrollInd.setAttribute('width', sidebarW - 0.1);
+        scrollInd.setAttribute('position', `0 ${scrollY - 0.16} 0.02`);
+        scrollInd.setAttribute('wrap-count', '20');
+        scrollInd.setAttribute('scale', '0.6 0.6 1');
+        sidebar.appendChild(scrollInd);
+        this._failedScrollIndTxt = scrollInd;
+
+        this._failedSidebar = sidebar;
+        this._updateFailedSidebar();
+    }
+    ,
+
+    // Mueve la ventana visible de la lista de errores (delta: -1 sube/palabras más nuevas, +1 baja)
+    _scrollFailedList: function(delta) {
+        try {
+            const total = (this._pronFailedList || []).length;
+            const maxVisible = this._failedMaxVisible || 1;
+            const maxScroll = Math.max(0, total - maxVisible);
+            const next = Math.min(maxScroll, Math.max(0, (this._failedListScroll || 0) + delta));
+            this._failedListScroll = next;
+            this._updateFailedSidebar();
+        } catch(e) {}
+    }
+    ,
+
+    // Refresca el contador y las líneas visibles (la más reciente arriba) a partir de
+    // this._pronFailedList. Cada entrada es { ing, transcript }: la palabra esperada y lo
+    // que el reconocimiento captó. Las líneas tienen posición fija; solo cambia su texto.
+    _updateFailedSidebar: function() {
+        try {
+            const words = this._pronFailedList || [];
+            const maxVisible = this._failedMaxVisible || (this._failedLineEls || []).length || 1;
+            if (this._failedCounterTxt) this._failedCounterTxt.setAttribute('value', `Errors: ${words.length}`);
+
+            const maxScroll = Math.max(0, words.length - maxVisible);
+            this._failedListScroll = Math.min(Math.max(0, this._failedListScroll || 0), maxScroll);
+            const start = this._failedListScroll;
+
+            (this._failedLineEls || []).forEach((lineEl, i) => {
+                const w = words[start + i];
+                try { lineEl.setAttribute('value', w ? `${start + i + 1}. ${w.ing} -> ${w.transcript || '?'}` : ''); } catch(e){}
+            });
+
+            const canScroll = words.length > maxVisible;
+            try { if (this._scrollUpBtn) this._scrollUpBtn.setAttribute('visible', canScroll); } catch(e){}
+            try { if (this._scrollDownBtn) this._scrollDownBtn.setAttribute('visible', canScroll); } catch(e){}
+            try {
+                if (this._failedScrollIndTxt) {
+                    this._failedScrollIndTxt.setAttribute('value', canScroll ? `${start + 1}-${Math.min(start + maxVisible, words.length)} / ${words.length}` : '');
+                }
+            } catch(e){}
+        } catch(e) {}
+    }
+    ,
+
+    _startPronunciation: function(words, payload) {
+        this._pronWords = words || [];
+        this._pronIndex = 0;
+        this._pronResults = [];
+        this._pronFailedList = [];
+        this._payloadForSubmit = payload || {};
+        this._awaitingPronResult = false;
+        this._clearWords();
+        this._createFailedSidebar();
+
+        // hide selection UI so only the pronunciation flow is visible
+        try {
+            const toHide = ['_titleEl','_songEl','_artistEl','_instr','_inputLabel','_inputContainer','_evalBtn'];
+            toHide.forEach(k => {
+                try {
+                    const elRef = this[k];
+                    if (elRef) {
+                        if (Array.isArray(elRef)) {
+                            elRef.forEach(x => { try { x.setAttribute('visible', false); } catch(e){} });
+                        } else {
+                            try { elRef.setAttribute('visible', false); } catch(e){}
+                        }
+                    }
+                } catch(e){}
+            });
+        } catch(e) {}
+
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SR) {
+            const err = document.createElement('a-text');
+            err.setAttribute('value', 'Speech recognition is not supported in this browser.\nPlease use Chrome or Edge.');
+            err.setAttribute('align', 'center');
+            err.setAttribute('color', '#ffaaaa');
+            err.setAttribute('width', this.data.width - 0.6);
+            err.setAttribute('position', '0 0 0.01');
+            err.setAttribute('wrap-count', '26');
+            this._wordsContainer.appendChild(err);
+            return;
+        }
+
+        this._renderPronunciation();
+    }
+    ,
+
+    // Render current word to pronounce, the listen button, feedback and progress
+    _renderPronunciation: function() {
+        try {
+            this._clearWords();
+
+            if (!this._pronWords || !this._pronWords.length) {
+                const noTxt = document.createElement('a-text');
+                noTxt.setAttribute('value', 'No content available for pronunciation');
+                noTxt.setAttribute('align', 'left');
+                noTxt.setAttribute('color', '#ffcccc');
+                noTxt.setAttribute('width', this.data.width - 0.9);
+                noTxt.setAttribute('position', `-${this.data.width/2 - 0.12} ${-0.75} 0.01`);
+                this._wordsContainer.appendChild(noTxt);
+                return;
+            }
+
+            const idx = this._pronIndex || 0;
+            if (idx >= this._pronWords.length) {
+                this._finishPronunciation();
+                return;
+            }
+
+            // reset attempt count for the word being shown
+            this._pronAttempts = 0;
+
+            const current = this._pronWords[idx];
+            const planeW = this.data.width;
+            const planeH = this.data.height;
+            const isPhrase = (this._selectedLevel === 3);
+            // Las frases (Nivel 3) pueden ocupar 2-3 líneas; reservar espacio extra debajo del
+            // texto principal para que no se solape con la instrucción y los controles.
+            const phraseGap = isPhrase ? planeH * 0.12 : 0;
+            const engY = planeH * 0.18;
+            const instrY = planeH * 0.03 - phraseGap;
+            const listenY = -planeH * 0.05 - phraseGap;
+            const meterY = -planeH * 0.20 - phraseGap;
+            const feedbackY = -planeH * 0.30 - phraseGap;
+            const progY = -planeH * 0.37 - phraseGap;
+
+            const engTxt = document.createElement('a-text');
+            engTxt.setAttribute('value', current.ing || '');
+            engTxt.setAttribute('align', 'center');
+            // Frases (Nivel 3) pueden ocupar varias líneas; anclar arriba para que crezcan
+            // hacia abajo en vez de re-centrarse y solaparse con el título del panel.
+            if (isPhrase) engTxt.setAttribute('baseline', 'top');
+            engTxt.setAttribute('color', '#ffffff');
+            engTxt.setAttribute('width', Math.max(1.0, planeW - 0.6));
+            engTxt.setAttribute('position', `0 ${engY} 0.01`);
+            engTxt.setAttribute('wrap-count', isPhrase ? '32' : '30');
+            if (isPhrase) engTxt.setAttribute('scale', '0.75 0.75 1');
+            this._wordsContainer.appendChild(engTxt);
+
+            const instrTxt = document.createElement('a-text');
+            instrTxt.setAttribute('value', isPhrase ? 'Say the phrase in English' : 'Say the word in English');
+            instrTxt.setAttribute('align', 'center');
+            instrTxt.setAttribute('color', '#cfcfcf');
+            instrTxt.setAttribute('width', Math.max(1.0, planeW - 0.9));
+            instrTxt.setAttribute('position', `0 ${instrY} 0.01`);
+            instrTxt.setAttribute('wrap-count', '30');
+            this._wordsContainer.appendChild(instrTxt);
+
+            // Listen button (explicit user gesture required to start the microphone)
+            const listenBtn = document.createElement('a-plane');
+            listenBtn.setAttribute('width', 1.2);
+            listenBtn.setAttribute('height', 0.34);
+            listenBtn.setAttribute('color', '#225577');
+            listenBtn.setAttribute('class', 'clickable');
+            listenBtn.setAttribute('position', `0 ${listenY} 0.01`);
+            const listenTxt = document.createElement('a-text');
+            listenTxt.setAttribute('value', 'LISTEN');
+            listenTxt.setAttribute('align', 'center');
+            listenTxt.setAttribute('color', '#ffffff');
+            listenTxt.setAttribute('width', 3.0);
+            listenTxt.setAttribute('position', '0 0 0.02');
+            listenBtn.appendChild(listenTxt);
+            listenBtn.addEventListener('click', () => this._startListening());
+            this._wordsContainer.appendChild(listenBtn);
+            this._pronListenBtn = listenBtn;
+            this._pronListenTxt = listenTxt;
+
+            // Audio meter (equalizer-style bars) showing live microphone input level while listening
+            this._meterMinHeight = 0.03;
+            this._meterMaxHeight = 0.16;
+            const meterContainer = document.createElement('a-entity');
+            meterContainer.setAttribute('position', `0 ${meterY} 0.01`);
+            this._wordsContainer.appendChild(meterContainer);
+            this._meterBars = [];
+            const barCount = 9;
+            const barW = 0.09;
+            const barGap = 0.025;
+            const totalBarsW = barCount * barW + (barCount - 1) * barGap;
+            const barsStartX = -(totalBarsW / 2) + (barW / 2);
+            for (let bi = 0; bi < barCount; bi++) {
+                const bar = document.createElement('a-plane');
+                const bx = barsStartX + bi * (barW + barGap);
+                bar.setAttribute('width', barW);
+                bar.setAttribute('height', this._meterMinHeight);
+                bar.setAttribute('color', '#335577');
+                bar.setAttribute('material', 'shader: flat; side: double;');
+                bar.setAttribute('position', `${bx} ${this._meterMinHeight / 2} 0`);
+                bar._baseX = bx;
+                meterContainer.appendChild(bar);
+                this._meterBars.push(bar);
+            }
+            this._meterContainer = meterContainer;
+
+            // Feedback placeholder (filled in after recognition result)
+            const feedback = document.createElement('a-text');
+            feedback.setAttribute('value', '');
+            feedback.setAttribute('align', 'center');
+            feedback.setAttribute('color', '#ffffff');
+            feedback.setAttribute('width', Math.max(1.0, planeW - 0.9));
+            feedback.setAttribute('position', `0 ${feedbackY} 0.01`);
+            feedback.setAttribute('wrap-count', '30');
+            this._wordsContainer.appendChild(feedback);
+            this._pronFeedback = feedback;
+
+            // Progress indicator
+            const prog = document.createElement('a-text');
+            prog.setAttribute('value', `Word ${idx+1} / ${this._pronWords.length}`);
+            prog.setAttribute('align', 'center');
+            prog.setAttribute('color', '#888888');
+            prog.setAttribute('width', Math.max(1.0, planeW - 0.9));
+            prog.setAttribute('position', `0 ${progY} 0.01`);
+            this._wordsContainer.appendChild(prog);
+
+            this._awaitingPronResult = false;
+        } catch(e) { console.warn('Render pronunciation error', e); }
+    }
+    ,
+
+    // Show a short feedback message under the listen button
+    _showPronFeedback: function(text, color) {
+        try {
+            if (this._pronFeedback) {
+                this._pronFeedback.setAttribute('value', text || '');
+                this._pronFeedback.setAttribute('color', color || '#ffffff');
+            }
+        } catch(e) {}
+    }
+    ,
+
+    // Open the microphone (independently of SpeechRecognition) and animate the equalizer bars
+    // from live frequency data, so the user gets visual confirmation the mic is picking up sound.
+    _startAudioMeter: function() {
+        try {
+            this._stopAudioMeter();
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return;
+            navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+                this._micStream = stream;
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) { this._stopAudioMeter(); return; }
+                this._audioCtx = new AudioCtx();
+                const source = this._audioCtx.createMediaStreamSource(stream);
+                const analyser = this._audioCtx.createAnalyser();
+                analyser.fftSize = 32;
+                analyser.smoothingTimeConstant = 0.6;
+                source.connect(analyser);
+                this._analyser = analyser;
+                this._analyserData = new Uint8Array(analyser.frequencyBinCount);
+
+                this._meterInterval = setInterval(() => {
+                    const bars = this._meterBars;
+                    if (!this._analyser || !bars || !bars.length) return;
+                    this._analyser.getByteFrequencyData(this._analyserData);
+                    for (let i = 0; i < bars.length; i++) {
+                        const dataIdx = Math.floor((i / bars.length) * this._analyserData.length);
+                        const v = this._analyserData[dataIdx] / 255; // 0..1
+                        const h = this._meterMinHeight + v * (this._meterMaxHeight - this._meterMinHeight);
+                        try {
+                            bars[i].setAttribute('height', h.toFixed(3));
+                            bars[i].setAttribute('position', `${bars[i]._baseX} ${(h / 2).toFixed(3)} 0`);
+                            bars[i].setAttribute('color', v > 0.66 ? '#ff4444' : (v > 0.33 ? '#ffcc33' : '#33cc66'));
+                        } catch(e) {}
+                    }
+                }, 60);
+            }).catch((err) => {
+                console.warn('Audio meter: microphone unavailable', err);
+            });
+        } catch(e) { console.warn('startAudioMeter error', e); }
+    }
+    ,
+
+    // Stop the mic stream/analyser and reset the equalizer bars to their resting height
+    _stopAudioMeter: function() {
+        try {
+            if (this._meterInterval) { clearInterval(this._meterInterval); this._meterInterval = null; }
+            if (this._micStream) { this._micStream.getTracks().forEach(t => { try { t.stop(); } catch(e){} }); this._micStream = null; }
+            if (this._audioCtx) { try { this._audioCtx.close(); } catch(e){} this._audioCtx = null; }
+            this._analyser = null;
+            this._analyserData = null;
+            (this._meterBars || []).forEach(b => {
+                try {
+                    b.setAttribute('height', this._meterMinHeight || 0.02);
+                    b.setAttribute('position', `${b._baseX} ${(this._meterMinHeight || 0.02) / 2} 0`);
+                    b.setAttribute('color', '#335577');
+                } catch(e) {}
+            });
+        } catch(e) {}
+    }
+    ,
+
+    // Start (or restart) speech recognition for the current word
+    _startListening: function() {
+        try {
+            if (this._awaitingPronResult) return;
+            const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SR) {
+                this._showPronFeedback('Speech recognition not supported in this browser', '#ffaaaa');
+                return;
+            }
+            if (this._recognition) {
+                try { this._recognition.onresult = null; this._recognition.onerror = null; this._recognition.onend = null; this._recognition.abort(); } catch(e){}
+                this._recognition = null;
+            }
+
+            const recognition = new SR();
+            recognition.lang = 'en-US';
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+            this._recognition = recognition;
+
+            try { this._pronListenTxt.setAttribute('value', 'LISTENING...'); } catch(e){}
+            try { this._pronListenBtn.setAttribute('color', '#337799'); } catch(e){}
+            this._showPronFeedback('', '#ffffff');
+            this._startAudioMeter();
+
+            recognition.onresult = (event) => {
+                const transcript = (event.results && event.results[0] && event.results[0][0]) ? event.results[0][0].transcript : '';
+                this._handlePronunciationResult(transcript);
+            };
+            recognition.onerror = (event) => {
+                const err = event && event.error;
+                if (err === 'not-allowed' || err === 'permission-denied') {
+                    this._showPronFeedback('Microphone access denied. Enable it in your browser settings.', '#ffaaaa');
+                } else if (err === 'no-speech') {
+                    this._showPronFeedback('No speech detected. Press LISTEN and try again.', '#ffddaa');
+                } else {
+                    this._showPronFeedback('Speech recognition error: ' + (err || 'unknown'), '#ffaaaa');
+                }
+                try { this._pronListenTxt.setAttribute('value', 'LISTEN'); } catch(e){}
+                try { this._pronListenBtn.setAttribute('color', '#225577'); } catch(e){}
+                this._stopAudioMeter();
+            };
+            recognition.onend = () => {
+                try { if (this._pronListenTxt) this._pronListenTxt.setAttribute('value', 'LISTEN'); } catch(e){}
+                try { if (this._pronListenBtn) this._pronListenBtn.setAttribute('color', '#225577'); } catch(e){}
+                this._stopAudioMeter();
+            };
+            recognition.start();
+        } catch(e) {
+            console.warn('startListening error', e);
+            this._showPronFeedback('Unable to start speech recognition', '#ffaaaa');
+            this._stopAudioMeter();
+        }
+    }
+    ,
+
+    // Normalize text for pronunciation comparison (lowercase, no punctuation/contractions, collapsed spaces)
+    _normalize: function(text) {
+        if (!text) return '';
+        let t = String(text).toLowerCase();
+        t = t.replace(/[‘’]/g, "'"); // smart quotes -> straight quote
+        t = t.replace(/'/g, ''); // drop apostrophes: "ain't" -> "aint"
+        t = t.replace(/[^a-z0-9\s]/g, ' '); // strip remaining punctuation
+        t = t.replace(/_/g, ' ');
+        t = t.replace(/\s+/g, ' ').trim();
+        const spokenMap = { 'gonna': 'going to', 'wanna': 'want to' };
+        if (spokenMap[t]) t = spokenMap[t];
+        return t;
+    }
+    ,
+
+    // Compare recognized transcript against the expected word (tolerant match: transcript may contain extra words).
+    // Retries the same word up to `pronMaxAttempts` times before advancing to the next one.
+    _handlePronunciationResult: function(transcript) {
+        try {
+            if (this._awaitingPronResult) return;
+            this._awaitingPronResult = true;
+
+            const idx = this._pronIndex || 0;
+            const current = this._pronWords[idx] || {};
+            const normTranscript = this._normalize(transcript);
+            const normExpected = this._normalize(current.ing);
+            const correct = !!(normExpected && normTranscript && normTranscript.includes(normExpected));
+
+            this._pronResults = this._pronResults || [];
+            const maxAttempts = (typeof this.data.pronMaxAttempts === 'number' && this.data.pronMaxAttempts > 0) ? this.data.pronMaxAttempts : 2;
+
+            if (correct) {
+                this._pronResults.push({ ing: current.ing || '', esp: current.esp || '', correct: true, transcript: transcript || '' });
+                this._showPronFeedback(`Correct! (heard: "${transcript}")`, '#aaffaa');
+                setTimeout(() => {
+                    this._pronIndex = idx + 1;
+                    this._awaitingPronResult = false;
+                    this._renderPronunciation();
+                }, 900);
+                return;
+            }
+
+            this._pronAttempts = (this._pronAttempts || 0) + 1;
+            if (this._pronAttempts < maxAttempts) {
+                // attempts remaining: let the user retry the same word
+                this._showPronFeedback(`Incorrect (heard: "${transcript || '...'}") — try again (${this._pronAttempts}/${maxAttempts})`, '#ffddaa');
+                this._awaitingPronResult = false;
+                return;
+            }
+
+            // attempts exhausted: record as incorrect and advance
+            this._pronResults.push({ ing: current.ing || '', esp: current.esp || '', correct: false, transcript: transcript || '' });
+            // agregar al inicio de la lista de errores (más reciente arriba), volver al tope del
+            // scroll para que quede visible, y refrescar el panel lateral
+            this._pronFailedList = this._pronFailedList || [];
+            this._pronFailedList.unshift({ ing: current.ing || '', transcript: transcript || '' });
+            this._failedListScroll = 0;
+            this._updateFailedSidebar();
+            this._showPronFeedback(`Incorrect (heard: "${transcript || '...'}")`, '#ffaaaa');
+            setTimeout(() => {
+                this._pronIndex = idx + 1;
+                this._awaitingPronResult = false;
+                this._renderPronunciation();
+            }, 900);
+        } catch(e) {
+            console.warn('handlePronunciationResult error', e);
+            this._awaitingPronResult = false;
+        }
+    }
+    ,
+
+    // Show final score, pass/fail vs passingThreshold, and the list of mispronounced words
+    _finishPronunciation: function() {
+        try {
+            const results = this._pronResults || [];
+            const total = results.length;
+            const correctCount = results.filter(r => r.correct).length;
+            const percentage = total ? (correctCount / total) : 0;
+            const threshold = (typeof this.data.passingThreshold === 'number') ? this.data.passingThreshold : 0.8;
+            const passed = percentage >= threshold;
+            const failedWords = results.filter(r => !r.correct).map(r => r.ing).filter(Boolean);
+            // Pares "palabra original -> palabra captada por el reconocimiento" para guardar en la BD
+            const failedPairs = this._pronFailedList || [];
+
+            const payload = this._payloadForSubmit || {};
+            payload.words = this._pronWords;
+            payload.archivo = this.data.songTitle || '';
+            payload.level = this._selectedLevel;
+            payload.correctCount = correctCount;
+            payload.total = total;
+            payload.percentage = percentage;
+            payload.passed = passed;
+            payload.failedWords = failedWords;
+
+            console.log('Pronunciation evaluation complete — emitting submit-evaluation with payload:', payload);
+            try { this.el.emit('submit-evaluation', payload); } catch(e){}
+
+            try {
+                this._saveEvaluation({
+                    archivo: payload.archivo,
+                    total: correctCount,
+                    // registra palabra original -> palabra captada por el reconocimiento, por cada fallo
+                    nota_evaluacion: failedPairs.length ? failedPairs.map(w => `${w.ing}->${w.transcript || '?'}`).join(', ') : 'none',
+                    terminado: 1,
+                    nivel: this._selectedLevel
+                });
+            } catch(e){}
+
+            this._clearWords();
+
+            const planeW = this.data.width;
+            const planeH = this.data.height;
+            const pct = Math.round(percentage * 100);
+
+            const summary = document.createElement('a-text');
+            summary.setAttribute('value', `${passed ? 'PASSED' : 'FAILED'} — ${correctCount}/${total} correct (${pct}%)`);
+            summary.setAttribute('align', 'center');
+            summary.setAttribute('color', passed ? '#aaffaa' : '#ffaaaa');
+            summary.setAttribute('width', Math.max(1.0, planeW - 0.6));
+            summary.setAttribute('position', `0 ${planeH * 0.2} 0.01`);
+            summary.setAttribute('wrap-count', '30');
+            this._wordsContainer.appendChild(summary);
+
+            const missedText = failedWords.length ? `Missed: ${failedWords.join(', ')}` : 'No mistakes — great job!';
+            const missed = document.createElement('a-text');
+            missed.setAttribute('value', missedText);
+            missed.setAttribute('align', 'center');
+            // Anclar arriba: con muchas palabras falladas este texto puede envolver a varias
+            // líneas; sin esto, A-Frame lo re-centra y crece hacia arriba, solapando el resumen.
+            missed.setAttribute('baseline', 'top');
+            missed.setAttribute('color', '#ffffff');
+            missed.setAttribute('width', Math.max(1.0, planeW - 0.6));
+            missed.setAttribute('position', `0 ${planeH * 0.08} 0.01`);
+            missed.setAttribute('wrap-count', '40');
+            this._wordsContainer.appendChild(missed);
+        } catch(e) { console.warn('finishPronunciation error', e); }
+    }
+    ,
 
     // Cargar y mostrar evaluaciones previas de la canción actual
     _loadPreviousEvaluations: function() {
@@ -850,7 +1509,8 @@ AFRAME.registerComponent('evaluacion-vr', {
                         const statusColor = ev.terminado ? '#00ff00' : '#ff0000';
                         
                         // Texto de evaluación con id_cancion incluido
-                        const evalText = `${status} | SCORE:${ev.total} | LAST WORD:${ev.nota_evaluacion || 'no'} | ${dateStr}`;
+                        const nivelLabel = `L${ev.nivel || 1}`;
+                        const evalText = `${status} | ${nivelLabel} | SCORE:${ev.total} | LAST WORD:${ev.nota_evaluacion || 'no'} | ${dateStr}`;
                         
                         const evalItem = document.createElement('a-text');
                         evalItem.setAttribute('value', evalText);

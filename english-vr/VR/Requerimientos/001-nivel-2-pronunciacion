@@ -1,0 +1,305 @@
+# Requerimiento 001 — Nivel 2 de Evaluación: Pronunciación de Palabras
+
+## 1. Objetivo
+
+Implementar un **segundo nivel de evaluación** dentro del componente `evaluacion-vr`. Este nivel se
+activa cuando, después de pulsar el botón **EVALUATE SONG** (karaoke-vr) y seleccionar **Nivel 2**,
+el sistema evalúa la **pronunciación en inglés** de cada palabra almacenada en la base de datos y
+asociada a la canción seleccionada.
+
+En contraste con el Nivel 1 (quiz de traducción inglés → español), el Nivel 2 pide al usuario que
+**pronuncie en voz alta** la palabra en inglés (`palabras_vr.ing_palabra`) y compara el resultado
+del reconocimiento de voz contra esa palabra esperada.
+
+---
+
+## 2. Antecedentes y estado actual
+
+### 2.1 Flujo actual (nivel único)
+
+1. En `karaoke-vr.js`, el botón **EVALUATE SONG** invoca `evaluateSong(videoPath)`.
+2. `evaluateSong()` crea/actualiza un panel con el componente `evaluacion-vr`, pasando
+   `songTitle`, `artist`, `position` y `visible`.
+3. El panel `evaluacion-vr` (`evaluacion-vr.js`) muestra:
+   - Título "EVALUATION".
+   - Usuario (desde `localStorage` o `current_user.php`).
+   - Canción y artista.
+   - Instrucción "Select a Difficulty Rating (1-3):".
+   - Tres botones numéricos (1:EASY, 2:NORMAL, 3:HARD).
+   - Botón **EVALUATE**.
+4. Al pulsar **EVALUATE**, se hace `fetch` a `obtener_palabras.php` y, con las palabras obtenidas,
+   se inicia `_startQuiz()`: un quiz de opción múltiple que muestra la palabra en inglés y tres
+   opciones en español (el Nivel 1 actual).
+
+### 2.2 Limitación detectada
+
+No existe un **selector de nivel**. El panel solo permite elegir dificultad (1-3) y siempre ejecuta
+el mismo quiz de traducción. Para incorporar la evaluación de pronunciación es necesario:
+
+- Agregar un **selector de nivel** (Nivel 1: Vocabulario / Nivel 2: Pronunciación).
+- Ramificar el flujo del botón **EVALUATE** según el nivel elegido.
+- Crear el flujo de reconocimiento de voz del Nivel 2.
+
+### 2.3 Archivos y datos relevantes
+
+| Recurso | Ruta | Rol |
+|---|---|---|
+| Componente evaluación | `english-vr/VR/componentes/evaluacion-vr/evaluacion-vr.js` | Panel y lógica de evaluación |
+| Demo del componente | `english-vr/VR/componentes/evaluacion-vr/evaluacion-vr.html` | Página de prueba del panel |
+| Karaoke (botón EVALUATE) | `english-vr/VR/componentes/karaoke-vr/karaoke-vr.js` | Dispara la evaluación |
+| Endpoint palabras | `Proyecto/backend/modelos/palabras/obtener_palabras.php` | Devuelve `esp_palabra` / `ing_palabra` |
+| Endpoint guardado | `Proyecto/backend/modelos/evaluaciones/guardar_evaluacion.php` | Registra `evaluaciones_vr` |
+| Endpoint consulta | `Proyecto/backend/modelos/evaluaciones/obtener_evaluaciones.php` | Lee historial de evaluaciones |
+| Esquema BD | `Proyecto/BaseDatos/english_vr.sql` | Tablas `palabras_vr`, `evaluaciones_vr`, etc. |
+
+Tabla `palabras_vr` (campos usados en el Nivel 2):
+
+- `id_palabra` — identificador.
+- `id_cancion_palabra` — FK hacia `canciones_vr.id_cancion`.
+- `esp_palabra` — palabra en español (referencia/traducción).
+- `ing_palabra` — palabra en inglés (la que el usuario debe pronunciar).
+
+---
+
+## 3. Alcance
+
+### Incluido
+
+- Selector de nivel en el panel `evaluacion-vr`.
+- Flujo completo del Nivel 2: mostrar palabra → escuchar → comparar → retroalimentar.
+- Guardado del resultado en `evaluaciones_vr`.
+- Manejo de errores de micrófono y de compatibilidad del navegador.
+- Actualización de la página demo (`evaluacion-vr.html`) si es necesario.
+
+### No incluido (fuera de alcance de este requerimiento)
+
+- Puntuación fonética fina (comparación por fonemas). Se usa comparación por transcripción.
+- Evaluación de frases completas o entonación.
+- Cambios en el Nivel 1 (quiz de vocabulario) salvo lo mínimo para convivir con el selector.
+- Soporte nativo en navegadores sin Web Speech API (se maneja con mensaje de error y fallback).
+
+---
+
+## 4. Requerimientos funcionales
+
+- **RF-1 — Selector de nivel.** El panel de evaluación debe mostrar dos opciones de nivel:
+  - Nivel 1: Vocabulario (quiz de traducción, comportamiento actual).
+  - Nivel 2: Pronunciación.
+- **RF-2 — Selección por defecto.** Si el usuario no selecciona nivel, se mantiene el Nivel 1 como
+  comportamiento por defecto (no rompe el flujo actual).
+- **RF-3 — Obtención de palabras.** Ambos niveles obtienen las palabras de `obtener_palabras.php`
+  usando `songTitle`/`author` (o `archivo`), tal como hoy.
+- **RF-4 — Presentación de palabra (Nivel 2).** Mostrar una palabra en inglés a la vez
+  (`ing_palabra`), junto con un indicador de progreso (palabra N de M).
+- **RF-5 — Captura de voz.** Usar la Web Speech API
+  (`window.SpeechRecognition || window.webkitSpeechRecognition`) con idioma `en-US`.
+- **RF-6 — Botón de escucha.** Incluir un control explícito para iniciar/escuchar de nuevo
+  (evita depender solo del auto-arranque y sortea restricciones de autoplay de micrófono).
+- **RF-7 — Comparación de pronunciación.** Normalizar transcripción y palabra esperada
+  (minúsculas, sin puntuación, contracciones, espacios) y determinar acierto/error.
+- **RF-8 — Retroalimentación visual.** Mostrar correcto (verde) / incorrecto (rojo) y la
+  transcripción reconocida. Avanzar a la siguiente palabra al acertar.
+- **RF-9 — Reintento.** Si falla, permitir reintentar la misma palabra hasta un número máximo de
+  intentos configurable por atributo del componente (`pronMaxAttempts`, **por defecto 2**). Al
+  agotar los intentos sin acertar, la palabra se registra como incorrecta y se avanza
+  automáticamente a la siguiente.
+- **RF-10 — Finalización.** Al terminar, emitir `submit-evaluation` y guardar en
+  `evaluaciones_vr` el total de aciertos, la palabra fallida (`nota_evaluacion`) y `terminado=1`.
+- **RF-11 — Manejo de errores.** Micrófono denegado, reconocimiento no disponible, y transcripción
+  vacía deben mostrarse como mensajes claros sin romper la escena VR.
+
+---
+
+## 5. Requerimientos no funcionales
+
+- **RNF-1 Compatibilidad:** Web Speech API funciona en Chrome/Edge. En navegadores sin soporte se
+  debe mostrar un mensaje de "no compatible" en lugar de fallar silenciosamente.
+- **RNF-2 Usabilidad:** Instrucciones breves ("Say the word in English") y botón visible para
+  volver a escuchar.
+- **RNF-3 Rendimiento:** El reconocimiento no debe bloquear el renderizado de la escena A-Frame.
+- **RNF-4 Seguridad:** No registrar audio; solo almacenar la transcripción/texto resultante en
+  `nota_evaluacion`.
+- **RNF-5 Consistencia:** Reutilizar la paleta de colores y el estilo visual del panel actual.
+
+---
+
+## 6. Diseño técnico
+
+### 6.1 Flujo de interacción propuesto
+
+```
+EVALUATE SONG (karaoke-vr)
+        │
+        ▼
+Panel evaluacion-vr
+        │
+        ├── Selector de nivel ──► Nivel 1 (Vocabulario) ──► _startQuiz()   [actual]
+        │
+        └────────────────────────► Nivel 2 (Pronunciación) ──► _startPronunciation()
+                                          │
+                                          ▼
+                       fetch obtener_palabras.php
+                                          │
+                                          ▼
+                       _renderPronunciation(word, index)
+                                          │
+                                          ▼
+                       SpeechRecognition.start()  (lang=en-US)
+                                          │
+                                          ▼
+                       onresult → transcript
+                                          │
+                                          ▼
+                       _normalize(transcript) == _normalize(ing_palabra) ?
+                              │                          │
+                            SI (acierto)              NO (error)
+                              │                          │
+                        avanza index++             feedback rojo + reintento
+                              │
+                              ▼
+                       fin de palabras → emit submit-evaluation + _saveEvaluation()
+```
+
+### 6.2 Componentes y archivos afectados
+
+**`english-vr/VR/componentes/evaluacion-vr/evaluacion-vr.js`** (principal):
+
+- En `init()`:
+  - Agregar dos botones de nivel ("LEVEL 1: VOCABULARY", "LEVEL 2: PRONUNCIATION").
+  - Almacenar `this._selectedLevel` (default `1`).
+  - Mantener el selector de dificultad para el Nivel 1.
+- En el handler del botón **EVALUATE** (actualmente líneas ~184-270):
+  - Si `_selectedLevel === 2`, tras obtener las palabras llamar a `_startPronunciation(words)`.
+  - Si `_selectedLevel === 1`, mantener `_startQuiz(words)`.
+- Nuevos métodos:
+  - `_startPronunciation(words)` — inicializa estado (equivalente a `_startQuiz`).
+  - `_renderPronunciation()` — muestra `ing_palabra` actual y botón de escucha.
+  - `_startListening()` — crea/configura el `SpeechRecognition` y lo arranca.
+  - `_normalize(text)` — normalización de cadenas.
+  - `_handlePronunciationResult(transcript)` — compara y decide avanzar/reintentar, respetando el
+    tope `pronMaxAttempts` (atributo del schema, por defecto `2`).
+- Reutilizar `_saveEvaluation()` para persistir el resultado.
+
+**`english-vr/VR/componentes/evaluacion-vr/evaluacion-vr.html`** (opcional):
+
+- Actualizar la demo para poder probar el selector de nivel.
+
+**`english-vr/VR/componentes/karaoke-vr/karaoke-vr.js`** (opcional, sin cambios obligatorios):
+
+- El panel ya recibe `songTitle`/`artist`; el nivel se elige dentro del panel. No se requiere
+  modificar `evaluateSong()` salvo que se quiera pre-seleccionar nivel desde el karaoke.
+
+### 6.3 API / Base de datos
+
+- **Obtención de palabras:** reutilizar
+  `GET /A-frame/Proyecto/backend/modelos/palabras/obtener_palabras.php?archivo=...&author=...`.
+  La respuesta ya incluye `esp_palabra` e `ing_palabra`.
+- **Guardado:** reutilizar `guardar_evaluacion.php` (POST JSON:
+  `{ id_usuario, archivo, total, nota_evaluacion, terminado }`).
+- **Opcional — diferenciar niveles:** agregar la columna `nivel` a `evaluaciones_vr` para
+  distinguir registros de Nivel 1 y Nivel 2, y reflejarlo en `guardar_evaluacion.php` y
+  `obtener_evaluaciones.php`. Si no se agrega, ambos niveles comparten la misma tabla y se
+  diferencian por `nota_evaluacion`/`total` (no recomendado a largo plazo).
+
+```sql
+ALTER TABLE evaluaciones_vr ADD COLUMN nivel TINYINT NOT NULL DEFAULT 1;
+```
+
+### 6.4 Algoritmo de comparación de pronunciación
+
+Dado que `ing_palabra` puede contener contracciones y apóstrofes (p. ej. `ain't`, `you're`,
+`it's`), la comparación debe normalizar ambos lados:
+
+1. Pasar a minúsculas (`toLowerCase()`).
+2. Eliminar apóstrofes (`'` → `''`).
+3. Eliminar puntuación y caracteres no alfanuméricos/espacios (`[^\w\s]`).
+4. Reemplazar guiones bajos por espacio.
+5. Colapsar espacios múltiples y recortar (`trim`).
+6. Opcional: mapear formas habladas comunes (`gonna` → `going to`, `wanna` → `want to`, `ain't` →
+   `aint`) para tolerar variantes del reconocedor.
+
+Comparar con igualdad estricta tras normalización; opcionalmente aceptar `includes` si el
+reconocedor devuelve frases más largas que la palabra objetivo.
+
+---
+
+## 7. Criterios de aceptación
+
+- [ ] Al pulsar **EVALUATE SONG** aparece el panel con un selector de nivel (1 y 2).
+- [ ] Seleccionar **Nivel 2** inicia la evaluación de pronunciación (no el quiz de traducción).
+- [ ] Se muestran, una a una, las palabras en inglés asociadas a la canción (`ing_palabra`).
+- [ ] El sistema captura la voz, reconoce la palabra y la compara contra la esperada.
+- [ ] Las palabras correctas avanzan y las incorrectas muestran retroalimentación y reintento.
+- [ ] Al finalizar se emite `submit-evaluation` y se guarda el resultado en `evaluaciones_vr`.
+- [ ] Micrófono denegado / navegador sin Web Speech API muestran mensaje claro y no rompen la escena.
+- [ ] El Nivel 1 (vocabulario) sigue funcionando sin regresión.
+
+---
+
+## 8. Checklist de ejecución
+
+### Fase 1 — Preparación y análisis
+
+- [ ] 1.1 Confirmar que la tabla `palabras_vr` tiene datos de `ing_palabra` para la canción de prueba.
+- [ ] 1.2 Verificar que `obtener_palabras.php` devuelve `esp_palabra` e `ing_palabra`.
+- [ ] 1.3 Confirmar navegador objetivo con soporte Web Speech API (Chrome/Edge).
+- [ ] 1.4 Revisar el handler actual del botón EVALUATE en `evaluacion-vr.js` (líneas ~184-270).
+
+### Fase 2 — Base de datos (opcional pero recomendado)
+
+- [ ] 2.1 Agregar columna `nivel` a `evaluaciones_vr`.
+- [ ] 2.2 Actualizar `guardar_evaluacion.php` para aceptar y persistir `nivel`.
+- [ ] 2.3 Actualizar `obtener_evaluaciones.php` para devolver `nivel`.
+- [ ] 2.4 Actualizar el volcado `english_vr.sql` con la nueva columna.
+
+### Fase 3 — Frontend: selector de nivel (`evaluacion-vr.js`)
+
+- [ ] 3.1 Crear los botones "LEVEL 1: VOCABULARY" y "LEVEL 2: PRONUNCIATION" en `init()`.
+- [ ] 3.2 Almacenar `this._selectedLevel` (default `1`) y resaltar el botón seleccionado.
+- [ ] 3.3 Mantener el selector de dificultad solo visible/activo para el Nivel 1.
+- [ ] 3.4 Registrar los nuevos botones en el raycast manual de mouse (`_onPointerDown`).
+
+### Fase 4 — Frontend: flujo de pronunciación (`evaluacion-vr.js`)
+
+- [ ] 4.1 Implementar `_startPronunciation(words)`.
+- [ ] 4.2 Implementar `_renderPronunciation()` (mostrar `ing_palabra`, progreso y botón de escucha).
+- [ ] 4.3 Implementar `_startListening()` usando `SpeechRecognition` con `lang='en-US'`.
+- [ ] 4.4 Implementar `_normalize(text)` según la sección 6.4.
+- [ ] 4.5 Implementar `_handlePronunciationResult(transcript)` (acierto → avanzar; error → reintentar
+      hasta `pronMaxAttempts`, por defecto 2, y luego avanzar registrando el fallo).
+- [ ] 4.6 Conectar el botón **EVALUATE** para ramificar: nivel 1 → `_startQuiz`, nivel 2 →
+      `_startPronunciation`.
+- [ ] 4.7 Reutilizar `_saveEvaluation()` al finalizar el Nivel 2.
+
+### Fase 5 — Manejo de errores y UX
+
+- [ ] 5.1 Capturar error de permiso de micrófono (`onerror`: `not-allowed`) y mostrar mensaje.
+- [ ] 5.2 Detectar ausencia de `SpeechRecognition` y mostrar "not supported".
+- [ ] 5.3 Manejar transcripción vacía (`no-speech`) con reintento.
+- [ ] 5.4 Mostrar la transcripción reconocida junto al resultado (acierto/error).
+- [ ] 5.5 Asegurar que el panel no se rompe al cerrar o al cambiar de canción.
+
+### Fase 6 — Pruebas
+
+- [ ] 6.1 Probar Nivel 2 con la canción "Stand By Me" (id 1) y palabras simples (`when`, `the`, `night`).
+- [ ] 6.2 Verificar palabras con contracciones (`ain't`, `you're`, `it's`) en las canciones 2 y 3.
+- [ ] 6.3 Probar el flujo completo: EVALUATE SONG → Nivel 2 → pronunciar → guardar.
+- [ ] 6.4 Verificar en `evaluaciones_vr` que se guarda `total`, `nota_evaluacion` y `terminado`.
+- [ ] 6.5 Probar regresión del Nivel 1 (quiz de traducción).
+- [ ] 6.6 Probar micrófono denegado y navegador sin soporte.
+
+### Fase 7 — Documentación
+
+- [ ] 7.1 Actualizar `Proyecto/documentacion/frontend.md` con el flujo del Nivel 2.
+- [ ] 7.2 Actualizar `Proyecto/documentacion/backend.md` si se agrega la columna `nivel`.
+- [ ] 7.3 Registrar este requerimiento como completado con resultados de prueba.
+
+---
+
+## 9. Referencias de código
+
+- `evaluacion-vr.js` — `init()` (selector actual de dificultad, ~líneas 113-168), handler EVALUATE
+  (~184-270), `_startQuiz()` (~537), `_chooseOption()` (~680), `_saveEvaluation()` (~471).
+- `karaoke-vr.js` — botón EVALUATE SONG (~962-1064), `evaluateSong()` (~1069).
+- `obtener_palabras.php` — devuelve `words[]` con `esp_palabra` e `ing_palabra`.
+- `guardar_evaluacion.php` — inserta en `evaluaciones_vr`.

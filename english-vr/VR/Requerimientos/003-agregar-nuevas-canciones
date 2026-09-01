@@ -1,0 +1,517 @@
+# Requerimiento 003 — Agregar Nuevas Canciones al Catálogo VR
+
+## 1. Objetivo
+
+Definir un flujo **repetible** para incorporar canciones nuevas al módulo de karaoke/evaluación,
+cubriendo tres pasos que hoy son manuales o inexistentes:
+
+1. **Obtener y reproducir** el video de la canción en la pantalla actual del karaoke (`karaoke-vr`).
+2. **Extraer y cargar** sus frases (inglés/español) y palabras sueltas en `frases_vr` /
+   `palabras_vr`.
+3. **Evaluar** la canción con los niveles ya construidos (1: Vocabulario, 2: Pronunciación de
+   palabras, 3: Pronunciación de frases) **sin modificar** esa lógica — solo requiere datos.
+
+Este requerimiento no cambia el motor de evaluación; su objetivo es escalar el **contenido**
+(actualmente 3 canciones) a un catálogo mayor sin repetir trabajo manual línea por línea.
+
+---
+
+## 2. Antecedentes y estado actual
+
+### 2.1 Cómo se reproduce una canción hoy
+
+- `karaoke-vr.js` (schema, línea 22-25) usa un `<video>` HTML local como fuente de textura WebGL:
+  `videoPath` apunta a un archivo `.mp4`, y `videoList` (línea 25) es un **string hardcodeado** con
+  el patrón `archivo.mp4|Autor,archivo2.mp4|Autor2,...` que alimenta la lista de botones de
+  selección (líneas 90, 151-246).
+- Al elegir una canción, se llama `loadVideo('./videos/karaoke/' + fileName, ...)` (líneas 213-216,
+  469-471), que carga el archivo físico desde `english-vr/VR/videos/karaoke/`.
+- Videos actuales: `StandByMe_BenEKing.mp4`, `itsMyLife_BonJovi.mp4`, `GangstasParadise_Coolio.mp4`
+  (carpeta `english-vr/VR/videos/karaoke/`).
+- El `<video>` HTML expone `currentTime`, lo que permite sincronizar overlays de letras con
+  `frases_vr.tiempo_frase`. Esto es clave para las decisiones de la sección 4.
+- Hay un comentario vestigial en `karaoke-vr.js` (línea 17): *"Requiere aframe-htmlembed-component
+  para mostrar iframes de YouTube"*. Indica que en algún momento se consideró reproducir YouTube
+  embebido, pero la implementación actual solo usa video local.
+
+### 2.2 Cómo se registra una canción en la base de datos
+
+- Tabla `canciones_vr` (`Proyecto/BaseDatos/english_vr.sql`, líneas 30-46): `id_cancion`,
+  `titulo_cancion`, `autor_cancion`, `archivo_cancion`, `fecha_hora_cancion`, `idioma_cancion`.
+- Ya existe un endpoint, `Proyecto/backend/modelos/canciones/registrar_canciones.php`, que crea la
+  tabla si no existe y agrega/lista canciones. **No está conectado** a `karaoke-vr.js`: el
+  componente sigue leyendo el `videoList` estático del schema en vez de consultar este endpoint.
+
+### 2.3 Cómo se llenan frases y palabras hoy (100% manual)
+
+- `frases_vr` (líneas 97-233 del volcado) y `palabras_vr` (líneas 242 en adelante) están pobladas
+  con `INSERT` individuales, **frase por frase y palabra por palabra**, escritos a mano para las 3
+  canciones existentes. No existe ningún script, endpoint ni herramienta de importación masiva.
+- El patrón de datos observado es traducible a un algoritmo: cada fila de `palabras_vr` referencia
+  una fila de `frases_vr` vía `id_frase_palabra`, y las palabras están en el **mismo orden
+  posicional** que su traducción (ej. frase 1: *"When the night has come"* → *"Cuando la noche ha
+  llegado"* genera los pares `when/cuando`, `the/la`, `night/noche`, `has/ha`, `come/llegado`).
+  Esto es la base de la heurística de segmentación en la sección 5.
+
+### 2.4 Por qué esto no toca la evaluación
+
+- Los endpoints `obtener_palabras.php` y `obtener_frases.php` (usados por los Niveles 1/2 y 3,
+  ver Requerimientos 001 y 002) consultan por `archivo_cancion`/`songTitle`+`author`. Cualquier
+  canción nueva con `canciones_vr`, `frases_vr` y `palabras_vr` correctamente pobladas **ya es
+  evaluable de inmediato**, sin tocar `evaluacion-vr.js`.
+
+### 2.5 Archivos y datos relevantes
+
+| Recurso | Ruta | Rol |
+|---|---|---|
+| Karaoke (reproducción y lista) | `english-vr/VR/componentes/karaoke-vr/karaoke-vr.js` | `videoList`, `loadVideo()` |
+| Videos locales actuales | `english-vr/VR/videos/karaoke/*.mp4` | Archivos servidos como textura |
+| Registro de canciones (existente, no conectado al frontend) | `Proyecto/backend/modelos/canciones/registrar_canciones.php` | Alta/listado en `canciones_vr` |
+| Endpoint palabras | `Proyecto/backend/modelos/palabras/obtener_palabras.php` | Patrón de consulta a replicar en el importador |
+| Endpoint frases | `Proyecto/backend/modelos/frases/obtener_frases.php` | Ídem, para `frases_vr` |
+| Esquema BD | `Proyecto/BaseDatos/english_vr.sql` | `canciones_vr` (30-46), `frases_vr` (97-233), `palabras_vr` (242+) |
+| Panel de evaluación (no se modifica) | `english-vr/VR/componentes/evaluacion-vr/evaluacion-vr.js` | Consumidor final de los datos |
+
+---
+
+## 3. Alcance
+
+### Incluido
+
+- Comparar y recomendar una forma de **obtener/reproducir** el video de una canción nueva en la
+  pantalla del karaoke (sección 4).
+- Definir un flujo (semi)automatizado para **extraer letra, traducir y segmentar** en frases y
+  palabras, con el formato intermedio que debe producir (sección 5).
+- Un **script/endpoint de importación** que reemplace los `INSERT` manuales, a partir de ese
+  formato intermedio.
+- Conectar `karaoke-vr.js` a `canciones_vr` (vía `registrar_canciones.php` o un endpoint de listado)
+  para que las canciones nuevas aparezcan sin editar el `videoList` hardcodeado.
+
+### No incluido
+
+- Cambios en el motor de evaluación (`evaluacion-vr.js`) — debe seguir funcionando sin
+  modificaciones, igual que en el Requerimiento 002.
+- Integrar en producción una API de pago de transcripción/traducción; se documenta como **punto de
+  extensión** (mismo criterio que el 002 dejó pendiente la API fonética de pago).
+- Resolver el aspecto legal/licenciamiento del contenido descargado: se documenta como advertencia
+  obligatoria a leer antes de ejecutar (sección 4.4), no se resuelve aquí.
+
+---
+
+## 4. Cómo obtener/reproducir el video de una canción nueva (opciones)
+
+La arquitectura actual depende de un `<video>` HTML **local y seekable** (para textura WebGL y para
+sincronizar `frases_vr.tiempo_frase` leyendo `currentTime`). Esto condiciona fuertemente cuál opción
+es viable dentro de la escena 3D.
+
+### Opción A — Descargar y alojar el video localmente (recomendada)
+
+- **Cómo:** usar una herramienta de descarga (p. ej. `yt-dlp`) más `ffmpeg` para obtener el
+  video/audio y convertirlo a `.mp4` (H.264/AAC, resolución razonable para VR, ej. 720p) y copiarlo
+  a `english-vr/VR/videos/karaoke/`, igual que las 3 canciones actuales.
+- **Pros:** encaja sin cambios con `loadVideo()` y la sincronización por `currentTime`; funciona
+  offline en el visor VR (importante en salas sin buena conectividad); sin restricciones de CORS,
+  ads ni límites de reproducción embebida; control total sobre calidad/duración/recorte.
+- **Contras:** paso manual de descarga + conversión por canción; consume espacio en disco/repo;
+  **requiere verificar que el usuario tenga derecho a usar ese contenido** (ver 4.4).
+- **Encaje con el flujo:** es la opción que mejor sostiene la sincronización de `tiempo_frase` para
+  los Niveles 2 y 3, porque el timestamp se calcula sobre el mismo archivo que se reproduce.
+
+### Opción B — Embeber el reproductor de YouTube (u otra plataforma) dentro de la escena
+
+- **Cómo:** usar `aframe-htmlembed-component` (ya mencionado, sin usar, en `karaoke-vr.js` línea 17)
+  o el `YouTube IFrame Player API` proyectado como plano/`html-embed` en la escena A-Frame.
+- **Pros:** no hay que descargar ni alojar archivos; contenido siempre actualizado con la fuente.
+- **Contras (relevantes para esta arquitectura):**
+  - El iframe de YouTube **no expone su frame de video como textura WebGL** de forma confiable
+    (restricciones de CORS/DRM del reproductor embebido); en la práctica se ve como un panel HTML
+    "flotando" sobre la escena, no como una superficie 3D texturizada como el `<video>` actual.
+  - Leer `currentTime` del reproductor de YouTube para sincronizar `tiempo_frase` es más frágil
+    (requiere la API JS del iframe, latencia de red, buffering) que leer un `<video>` local.
+  - Depende de conexión a internet estable dentro del visor VR, y puede mostrar anuncios.
+  - Sujeto a los Términos de Servicio de YouTube sobre reproducción embebida.
+- **Uso recomendado:** **no** como reemplazo del `<video>` texturizado, sino como una función
+  aparte — p. ej. un botón "Ver en YouTube" que abre una vista 2D/overlay solo para *previsualizar*
+  la canción antes de decidir agregarla (no para la sesión de karaoke/evaluación en sí).
+
+### Opción C — Solo audio + letras sincronizadas manualmente (sin video)
+
+- **Cómo:** usar un archivo de audio (mp3/ogg) más un fondo/visualización genérica en vez de video
+  musical, mostrando las frases superpuestas según `tiempo_frase`.
+- **Pros:** archivos más livianos, más fácil de conseguir con licencia clara (bibliotecas de audio
+  libres de derechos), menor riesgo legal.
+- **Contras:** pierde la experiencia visual tipo "video musical" que tiene el karaoke actual.
+- **Uso recomendado:** alternativa válida cuando no se consigue el video original con licencia
+  adecuada, priorizando tener la canción evaluable aunque sea sin video.
+
+### 4.4 Advertencia de derechos de autor (leer antes de implementar la Opción A)
+
+Descargar video/audio de YouTube u otra plataforma puede infringir sus Términos de Servicio y
+derechos de autor del contenido si no se tiene autorización (canción propia, licencia explícita,
+contenido de dominio público o royalty-free). Este requerimiento **no resuelve** ese aspecto legal;
+solo documenta el mecanismo técnico. Antes de agregar una canción con la Opción A, confirmar que el
+uso está permitido (ej. contenido educativo propio, biblioteca con licencia, o permiso del titular).
+
+### 4.5 Recomendación
+
+- **Opción A** como flujo principal (consistente con la arquitectura, sostiene la sincronización
+  precisa de frases/palabras).
+- **Opción B** documentada como función complementaria de previsualización 2D, no como reemplazo.
+- **Opción C** como alternativa cuando no se pueda conseguir el video con derechos claros.
+
+---
+
+## 5. Flujo para extraer palabras y frases (semi-automatizado)
+
+Objetivo: producir un **formato intermedio** (JSON) por canción, que un script de importación
+pueda insertar directamente en `frases_vr` y `palabras_vr`, reemplazando el copy/paste manual.
+
+### 5.1 Pasos
+
+1. **Obtener letra con tiempos (inglés):** conseguir un archivo de subtítulos/letras sincronizadas
+   (`.srt`/`.lrc`) de la canción — por búsqueda manual (letras+timestamps ya existen para canciones
+   populares) o generado por transcripción automática del audio (p. ej. Whisper) cuando no exista
+   uno público. Cada línea del `.srt`/`.lrc` se vuelve candidata a fila de `frases_vr`.
+2. **Traducir cada línea a español:** traducción automática (API de traducción) **con revisión
+   humana obligatoria**, porque la calidad de la traducción afecta directamente el quiz del Nivel 1
+   (opciones de respuesta) y la comprensión del usuario.
+3. **Mapear a `frases_vr`:** por cada línea, generar
+   `{ ingles_frase, español_frase, tiempo_frase }` — `tiempo_frase` se parsea del timestamp del
+   `.srt`/`.lrc` (formato `HH:MM:SS`, igual que la tabla actual).
+4. **Derivar `palabras_vr` por frase:** tokenizar `ingles_frase` en palabras y alinearlas
+   **posicionalmente** con los tokens de `español_frase` (misma heurística que siguen los datos
+   existentes: palabra N del inglés ↔ palabra N del español). Esta alineación es aproximada — el
+   orden gramatical no siempre coincide entre idiomas — por lo que **requiere revisión humana antes
+   de insertar**, igual que la traducción. No se debe insertar `palabras_vr` sin pasar por esta
+   revisión, para no degradar el quiz de vocabulario del Nivel 1.
+5. **Formato intermedio esperado (por canción), a producir manualmente o con un script auxiliar:**
+
+```json
+{
+  "titulo_cancion": "Nombre de la canción",
+  "autor_cancion": "Artista",
+  "archivo_cancion": "NombreCancion_Artista.mp4",
+  "idioma_cancion": "ingles",
+  "frases": [
+    {
+      "tiempo_frase": "00:00:03",
+      "ingles_frase": "When the night has come",
+      "espanol_frase": "Cuando la noche ha llegado",
+      "palabras": [
+        { "ing": "when", "esp": "cuando" },
+        { "ing": "the", "esp": "la" },
+        { "ing": "night", "esp": "noche" },
+        { "ing": "has", "esp": "ha" },
+        { "ing": "come", "esp": "llegado" }
+      ]
+    }
+  ]
+}
+```
+
+6. **Importar:** un script/endpoint (sección 6.2) lee este JSON y hace, en orden: (a) upsert en
+   `canciones_vr` (o llamar a `registrar_canciones.php`), (b) `INSERT` en `frases_vr` por cada
+   frase, capturando el `id_frase` generado, (c) `INSERT` en `palabras_vr` usando ese `id_frase`
+   como `id_frase_palabra` y el `id_cancion` como `id_cancion_palabra`.
+
+### 5.2 Nota sobre automatización total
+
+Automatizar 100% (transcripción + traducción + alineación de palabras) sin revisión humana es
+**posible técnicamente** pero **no se recomienda** para este alcance: errores de transcripción o de
+alineación palabra-a-palabra se propagan directo al quiz (Nivel 1) y a la comparación de
+pronunciación (Niveles 2/3), degradando la experiencia. Se deja como punto de extensión futuro
+(similar al punto de extensión de API fonética de pago del Requerimiento 002).
+
+---
+
+## 6. Requerimientos funcionales y no funcionales
+
+### 6.1 Funcionales
+
+- [x] **RF-1 — Alta de canción con video local.** Poder copiar un `.mp4` a
+  `english-vr/VR/videos/karaoke/` y registrar la fila correspondiente en `canciones_vr` (reusando
+  `registrar_canciones.php`).
+  *(Implementado con un componente nuevo, `new-song` — no estaba planeado como UI dedicada en la
+  versión original de este requerimiento, se agregó para cubrir la alta manual de forma usable.
+  Ver sección 6.3 "Componente New Song" para el detalle.)*
+- [x] **RF-2 — Catálogo dinámico en karaoke.** `karaoke-vr.js` debe poder listar las canciones desde
+  `canciones_vr` (vía un endpoint de listado) en vez de depender únicamente del `videoList`
+  hardcodeado del schema, para que una canción nueva aparezca sin editar código.
+  *(Implementado: `karaoke-vr.js` llama a `registrar_canciones.php` en `init()` — la respuesta ya
+  trae el listado completo de `canciones_vr` — y construye la lista de botones desde ahí, con
+  `videoList` solo como respaldo si la petición falla o la BD está vacía. Verificado en vivo: una
+  canción "test" agregada manualmente en `canciones_vr` apareció en el panel sin tocar el código.)*
+- **RF-3 — Importación de frases/palabras.** Un script/endpoint que reciba el JSON intermedio
+  (sección 5.1.5) e inserte en `frases_vr` y `palabras_vr` sin intervención manual de SQL.
+- **RF-4 — Idempotencia de la importación.** Reimportar la misma canción no debe duplicar filas
+  (usar `archivo_cancion` como clave para detectar "ya existe" y decidir actualizar o abortar).
+- **RF-5 — Validación mínima del JSON de entrada.** Rechazar con mensaje claro si faltan campos
+  obligatorios (`ingles_frase`, `tiempo_frase`) o si `tiempo_frase` no tiene formato `HH:MM:SS`.
+- **RF-6 — Sin cambios en evaluación.** Una canción cargada por este flujo debe ser evaluable de
+  inmediato en los Niveles 1, 2 y 3 sin modificar `evaluacion-vr.js`.
+- **RF-7 — Previsualización opcional (Opción B).** Botón/opción para previsualizar el video en
+  YouTube (u otra plataforma) en una vista 2D antes de decidir descargarlo, sin integrarlo como
+  fuente de reproducción de la sesión de karaoke.
+
+### 6.2 No funcionales
+
+- **RNF-1 Consistencia de datos:** los `id_frase` referenciados por `palabras_vr.id_frase_palabra`
+  deben corresponder exactamente a la frase de la misma canción (evitar el desfase que sería fácil
+  de introducir al hacerlo a mano).
+- **RNF-2 Trazabilidad:** el script de importación debe loguear cuántas frases/palabras insertó y
+  para qué `id_cancion`, para poder auditar altas de contenido.
+- **RNF-3 Reversibilidad:** debe ser posible eliminar una canción y todo su contenido asociado
+  (`frases_vr`, `palabras_vr`, video local) sin dejar filas huérfanas.
+- **RNF-4 Legal:** el flujo de descarga (Opción A) debe incluir, como paso documentado y explícito,
+  la verificación de derechos de uso del contenido (sección 4.4) — no automatizable, es una
+  decisión humana antes de ejecutar la descarga.
+- **RNF-5 Calidad del contenido:** traducción y alineación palabra-a-palabra (sección 5.1, pasos 2
+  y 4) requieren revisión humana antes de insertar; el script de importación no debe asumirse como
+  "listo para producción" sin ese paso.
+
+---
+
+## 7. Diseño técnico
+
+### 7.1 Flujo propuesto de punta a punta
+
+```
+1) Elegir canción nueva
+        │
+        ▼
+2) Conseguir video con derechos claros ──► Opción A: yt-dlp + ffmpeg → .mp4 local
+        │                                  Opción B: solo previsualización YouTube (no se aloja)
+        │                                  Opción C: solo audio con licencia clara
+        ▼
+3) Copiar .mp4 a english-vr/VR/videos/karaoke/
+        │
+        ▼
+4) Conseguir/generar letra con tiempos (.srt/.lrc) ──► transcripción (Whisper) si no existe
+        │
+        ▼
+5) Traducir línea por línea (API + revisión humana)
+        │
+        ▼
+6) Tokenizar y alinear palabras ing/esp por frase (heurística posicional + revisión humana)
+        │
+        ▼
+7) Armar JSON intermedio (sección 5.1.5)
+        │
+        ▼
+8) POST a endpoint de importación (NUEVO) ──► upsert canciones_vr, INSERT frases_vr, INSERT palabras_vr
+        │
+        ▼
+9) karaoke-vr.js lista la canción desde canciones_vr (RF-2) ──► aparece en el selector
+        │
+        ▼
+10) evaluacion-vr.js evalúa la canción con obtener_palabras.php / obtener_frases.php (sin cambios)
+```
+
+### 7.2 Componentes y archivos afectados
+
+**`english-vr/VR/componentes/karaoke-vr/karaoke-vr.js`:** [implementado]
+
+- Sustituir (o complementar) el parseo de `this.data.videoList` (línea 151) por una llamada a un
+  endpoint de listado de `canciones_vr`, manteniendo `videoList` como *fallback* si la BD no
+  responde (para no romper el comportamiento actual).
+- Botón/opción de previsualización (Opción B), fuera del flujo de `loadVideo()`. *(Se implementó
+  del lado de `new-song`, no de `karaoke-vr`: ver más abajo.)*
+- Se agregó además un listener a `window` para el evento `cancion-agregada` (disparado por
+  `new-song`), que vuelve a llamar `_initSongList()` para refrescar la lista sin recargar la
+  página. `_buildSongListUI()` se hizo idempotente (quita el panel/botones anteriores antes de
+  reconstruir) para poder llamarse varias veces sin duplicar la UI.
+
+**`Proyecto/backend/modelos/canciones/registrar_canciones.php`:** [implementado]
+
+- Confirmar/agregar un modo de **listado** (`GET` sin parámetros de alta) que `karaoke-vr.js` pueda
+  consumir para RF-2, si no lo tiene ya. *(Ya existía.)*
+- Se agregó un modo de **alta explícita**: `POST` con `titulo`, `autor`, `archivo` (e `idioma`
+  opcional) como campos separados — a diferencia del modo `list`/`file` (que deriva título/autor
+  del nombre de archivo), aquí el usuario los escribe directamente. Usa `INSERT ... ON DUPLICATE
+  KEY UPDATE` sobre la clave única `(titulo_cancion, autor_cancion)`, así que reenviar la misma
+  canción actualiza `archivo_cancion`/`idioma_cancion` en vez de duplicar la fila. Responde con el
+  listado completo actualizado, igual que el modo `list`.
+
+**`english-vr/VR/componentes/new-song/new-song.js` (NUEVO componente):** [implementado]
+
+- Panel **3D dentro de la escena** (no HTML/CSS superpuesto — se descartó una primera versión en
+  2D con un sidebar HTML anclado a la pantalla, a pedido explícito: el formulario debe verse y
+  comportarse como los demás componentes de la app), posicionado al lado izquierdo del video del
+  karaoke (`position` por defecto `-9 5 0`).
+- Como A-Frame no tiene entrada de texto nativa, el panel trae su propio **teclado virtual**
+  (botones `a-plane`/`a-text`: dígitos, QWERTY, `ñ`/`á`/`é`/`í`/`ó`/`ú` en una fila aparte, `_`,
+  `.`, `CAPS`, `SPACE`, `BKSP`, `CLEAR`) — mismo patrón de botones clickeables que ya usan
+  `karaoke-vr.js` y `evaluacion-vr.js`.
+- Cuatro campos: Título, Autor, Archivo (nombre ya copiado a `videos/karaoke/`, Opción A) y URL de
+  YouTube (opcional, solo para el botón **PREVIEW ON YOUTUBE** — `window.open` en pestaña nueva,
+  Opción B; no descarga nada). Un campo se activa haciendo click sobre su fila; el teclado escribe
+  sobre el campo activo.
+- Botón **GUARDAR CANCIÓN**: `POST` a `registrar_canciones.php` (modo alta explícita); al terminar
+  emite `window.dispatchEvent(new CustomEvent('cancion-agregada'))` para que `karaoke-vr.js`
+  refresque su lista en vivo, y hace un `HEAD` best-effort a `./videos/karaoke/<archivo>` para
+  avisar (sin bloquear el guardado) si el archivo aún no fue copiado.
+- Igual que `karaoke-vr.js`/`evaluacion-vr.js`, además de los `click` nativos (para el cursor VR
+  con `raycaster="objects: .clickable"`) implementa su propio raycast manual por `pointerdown` del
+  mouse, porque el `<a-cursor>` de `index.html` no usa `rayOrigin: mouse` (apunta al centro de la
+  pantalla, no a la posición exacta del puntero).
+- **Teclado físico:** además de los botones, cada campo acepta tipeo real del teclado. Al hacer
+  click en un campo entra en "modo escritura" (`_typingMode`) y un listener de `keydown` en
+  `window` escribe en el campo activo (soporta letras, dígitos, acentos/ñ vía `evt.key`, sin pasar
+  por el `CAPS` del teclado virtual). `Backspace` borra, `Espacio` inserta un espacio, `Tab` /
+  `Shift+Tab` cambia de campo, `Enter` guarda, `Escape` sale del modo escritura. Fuera del modo
+  escritura el teclado físico no toca el formulario.
+- **Movimiento de cámara solo con flechas:** se quitó `wasd-controls` de la cámara en `index.html`
+  y se reemplazó por un componente nuevo, `arrow-controls` (definido en `index.js`), que mueve la
+  cámara únicamente con las flechas. Así W/A/S/D quedan libres para escribir en el formulario sin
+  mover la escena a la vez — no fue necesario un manejo especial dentro de `new-song.js` porque el
+  conflicto se resolvió a nivel de la cámara.
+
+**`english-vr/VR/src/fonts.js` + `english-vr/VR/fonts/Arial-msdf.{json,png}` (NUEVO, alcance de
+toda la app, no solo `new-song`):** [implementado]
+
+- Al escribir "mañana" o mostrar cualquier canción/frase con ñ o vocales acentuadas se descubrió
+  que la fuente MSDF por defecto de A-Frame (`roboto`, `cdn.aframe.io/fonts/Roboto-msdf.json`)
+  solo cubre el rango ASCII imprimible (códigos 32-126): no tiene glifos para ñ/Ñ, á é í ó ú
+  (ni mayúsculas), ni ¿/¡. El texto con esos caracteres se veía recortado/en blanco en **toda** la
+  app (letras de canciones, traducciones, y ahora también el formulario de `new-song`), no solo
+  ahí donde se notó primero.
+- Se generó un atlas MSDF propio con `msdf-bmfont-xml` (dependencia pura JS, sin binarios
+  nativos) a partir de `C:\Windows\Fonts\arial.ttf`, con un charset ampliado: ASCII completo +
+  `áéíóúÁÉÍÓÚñÑüÜ¿¡ªº`. Los archivos resultantes se guardaron en
+  `english-vr/VR/fonts/Arial-msdf.json` y `Arial-msdf.png`.
+- `src/fonts.js` fija `AFRAME.components.text.schema.font.default` a ese atlas apenas se carga
+  A-Frame (antes de que `<a-scene>` se parsee), así que **todos** los `<a-text>` de la app usan la
+  fuente nueva por defecto sin tener que declarar `font` en cada uno. Se agregó su `<script>` en
+  `index.html` justo después de `libs/aframe.min.js`.
+- Verificado en vivo: el texto "Duración desconocida" en la lista de canciones de `karaoke-vr`
+  (que antes se veía como "Duracin desconocida", sin la "ó") ahora se muestra correctamente, sin
+  tocar ese código — confirma que el arreglo es efectivamente global.
+
+**`Proyecto/backend/modelos/frases/` y `Proyecto/backend/modelos/palabras/` (NUEVO endpoint):**
+
+- `importar_cancion.php` (o similar): recibe el JSON intermedio por `POST`, valida (RF-5), hace
+  upsert de `canciones_vr` y los `INSERT` en `frases_vr`/`palabras_vr` en una transacción, con
+  chequeo de idempotencia (RF-4) contra `archivo_cancion`.
+
+**Herramienta auxiliar fuera del backend PHP (script local, no expuesto como endpoint público):**
+
+- Script (Node o Python) que oriente los pasos 2-7 de la sección 7.1: invocar `yt-dlp`/`ffmpeg`
+  (Opción A), y ensamblar el JSON intermedio a partir del `.srt`/`.lrc` + traducciones. Este script
+  corre en la máquina del desarrollador/administrador de contenido, no en el servidor de producción.
+
+### 7.3 Formato de entrada del endpoint de importación
+
+Ver JSON de la sección 5.1.5. El endpoint debe responder con un resumen:
+
+```json
+{
+  "status": "success",
+  "id_cancion": 4,
+  "frases_insertadas": 32,
+  "palabras_insertadas": 154
+}
+```
+
+---
+
+## 8. Criterios de aceptación
+
+- [x] Existe documentación clara (esta) de al menos 3 opciones para obtener/reproducir el video,
+      con una recomendación explícita y su advertencia legal.
+- [x] Se puede copiar un `.mp4` nuevo a `english-vr/VR/videos/karaoke/` y registrarlo en
+      `canciones_vr` sin editar SQL a mano (reusando o extendiendo `registrar_canciones.php`).
+      *(Vía el componente 3D `new-song`, que llama al nuevo modo de alta explícita del endpoint.)*
+- [x] `karaoke-vr.js` muestra en su lista de canciones una canción agregada por este flujo sin
+      modificar el string `videoList` del schema.
+- [ ] Existe un endpoint/script de importación que, a partir del JSON intermedio, puebla
+      `frases_vr` y `palabras_vr` sin `INSERT` manuales.
+- [ ] Reimportar el mismo JSON no duplica filas (RF-4).
+- [ ] Una canción cargada por este flujo es evaluable en los Niveles 1, 2 y 3 usando
+      `evaluacion-vr.js` **sin modificarlo**.
+- [ ] El flujo documenta explícitamente el paso de verificación de derechos de uso antes de
+      descargar un video (Opción A).
+
+---
+
+## 9. Checklist de ejecución
+
+### Fase 1 — Preparación y análisis
+
+- [ ] 1.1 Confirmar herramientas disponibles en el entorno de desarrollo para Opción A
+      (`yt-dlp`, `ffmpeg`) y para transcripción (Whisper u otra) si no hay `.srt`/`.lrc` público.
+- [ ] 1.2 Elegir 1-2 canciones piloto para probar el flujo completo de punta a punta.
+- [ ] 1.3 Confirmar que se cuenta con derechos de uso para las canciones piloto (RNF-4).
+
+### Fase 2 — Obtención y alojamiento del video
+
+- [ ] 2.1 Descargar/convertir el video piloto a `.mp4` (Opción A) y copiarlo a
+      `english-vr/VR/videos/karaoke/`.
+- [ ] 2.2 Confirmar que reproduce correctamente como textura en `karaoke-vr.js` (reusa `loadVideo`).
+
+### Fase 3 — Backend: catálogo dinámico de canciones
+
+- [x] 3.1 Verificar/agregar modo de listado en `registrar_canciones.php`.
+      *(Ya existía: una petición GET sin `list`/`file`/`files` devuelve `{songs: [...]}` con todo
+      `canciones_vr`. Se reutiliza la misma llamada que registra `videoList`, que además de
+      registrar devuelve el listado completo — no hizo falta un endpoint nuevo.)*
+- [x] 3.2 Conectar `karaoke-vr.js` a ese listado, con `videoList` como fallback (RF-2).
+      *(`karaoke-vr.js`: nuevo método `_initSongList()` hace la petición y, si hay canciones en la
+      BD, llama a `_buildSongListUI(dbVideos)`; si falla o la BD está vacía, llama a
+      `_buildSongListUI(fallbackVideos)` con el `videoList` del schema. La construcción del panel
+      — antes en línea dentro de `init()` — se extrajo a `_buildSongListUI(videos)` para poder
+      llamarla desde cualquiera de las dos fuentes.)*
+- [x] 3.3 Crear el componente `new-song` (panel 3D, no HTML/CSS) para la alta manual de canciones,
+      con teclado virtual propio y botón de previsualización en YouTube (Opción B). Verificado en
+      vivo: guardar una canción de prueba la insertó en `canciones_vr` y disparó el refresco en
+      vivo del panel de `karaoke-vr` (evento `cancion-agregada`), sin recargar la página.
+
+### Fase 4 — Extracción y formato intermedio
+
+- [ ] 4.1 Conseguir/generar `.srt`/`.lrc` en inglés para la canción piloto.
+- [ ] 4.2 Traducir línea por línea (API + revisión humana).
+- [ ] 4.3 Tokenizar y alinear palabras ing/esp por frase (heurística posicional + revisión humana).
+- [ ] 4.4 Producir el JSON intermedio (sección 5.1.5) para la canción piloto.
+
+### Fase 5 — Backend: endpoint de importación
+
+- [ ] 5.1 Crear `importar_cancion.php` (o similar) con validación (RF-5), upsert de `canciones_vr`
+      e inserción transaccional en `frases_vr`/`palabras_vr`.
+- [ ] 5.2 Implementar chequeo de idempotencia contra `archivo_cancion` (RF-4).
+- [ ] 5.3 Probar con el JSON piloto y verificar los conteos de la respuesta.
+
+### Fase 6 — Validación end-to-end
+
+- [ ] 6.1 Confirmar que la canción piloto aparece en el selector del karaoke.
+- [ ] 6.2 Evaluarla en Nivel 1 (vocabulario), Nivel 2 (palabras) y Nivel 3 (frases) sin tocar
+      `evaluacion-vr.js`.
+- [ ] 6.3 Revisar manualmente una muestra de `palabras_vr` generadas por alineación automática y
+      corregir errores antes de considerarla lista.
+
+### Fase 7 — Documentación
+
+- [ ] 7.1 Documentar en `Proyecto/documentacion/backend.md` el nuevo endpoint de importación y el
+      formato JSON intermedio.
+- [ ] 7.2 Documentar en `Proyecto/documentacion/frontend.md` el catálogo dinámico de canciones.
+- [ ] 7.3 Registrar qué canciones fueron agregadas y con qué opción (A/B/C) se obtuvo su video.
+
+---
+
+## 10. Referencias de código
+
+- `karaoke-vr.js` — schema (`videoPath`/`videoList`, líneas 22-25), comentario vestigial de
+  YouTube embed (línea 17), `_initSongList()` y `_buildSongListUI()` (catálogo dinámico + refresco
+  en vivo por `cancion-agregada`), `loadVideo()`, `evaluateSong()`.
+- `new-song.js` — componente nuevo: panel 3D de alta manual de canciones (teclado virtual y
+  físico, previsualización YouTube, guardado vía `registrar_canciones.php`, evento
+  `cancion-agregada`).
+- `index.js` — componente nuevo `arrow-controls` (mueve la cámara solo con flechas); `index.html`
+  usa `arrow-controls` en vez de `wasd-controls` en la cámara.
+- `src/fonts.js` + `fonts/Arial-msdf.{json,png}` — fuente MSDF por defecto de `<a-text>` con
+  soporte de ñ/acentos/¿¡ (la de A-Frame por defecto no los tiene), aplica a toda la app.
+- `registrar_canciones.php` — alta/creación de `canciones_vr` (modo `list`/`file` por nombre de
+  archivo, y modo de alta explícita `titulo`/`autor`/`archivo` usado por `new-song.js`).
+- `obtener_palabras.php` / `obtener_frases.php` — patrón de consulta a replicar/reusar desde el
+  endpoint de importación y desde el catálogo dinámico.
+- `english_vr.sql` — `canciones_vr` (30-46), `frases_vr` (97-233), `palabras_vr` (242+).
+- `evaluacion-vr.js` — consumidor final de `frases_vr`/`palabras_vr`, no requiere cambios (ver
+  Requerimientos 001 y 002 para el detalle de cómo consume estos datos).

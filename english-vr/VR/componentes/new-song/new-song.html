@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Song VR</title>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="new-song.js"></script>
+</head>
+<body>
+    <!-- Demo aislado del componente New Song (ver Requerimiento 003) -->
+    <a-scene background="color: #000011">
+        <a-entity light="type: ambient; color: #BBB; intensity: 0.8"></a-entity>
+        <a-entity light="type: directional; position: 0 1 1; intensity: 0.8"></a-entity>
+
+        <a-entity camera look-controls wasd-controls position="0 2.5 5">
+            <a-cursor
+                position="0 0 -1"
+                geometry="primitive: ring; radiusInner: 0.02; radiusOuter: 0.03"
+                material="color: white; shader: flat"
+                raycaster="objects: .clickable">
+            </a-cursor>
+        </a-entity>
+
+        <a-entity id="new-song-component"
+            new-song="position: 0 2.5 -3">
+        </a-entity>
+    </a-scene>
+</body>
+</html>
