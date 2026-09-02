@@ -1,0 +1,31 @@
+services:
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+      MYSQL_DATABASE: english_vr
+    volumes:
+      - ../Proyecto/BaseDatos/english_vr.sql:/docker-entrypoint-initdb.d/01-english_vr.sql:ro
+      - db-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+
+  web:
+    build: .
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_USER: root
+      DB_PASS: ""
+      DB_NAME: english_vr
+    volumes:
+      # Monta la raíz de ARS-test (dos niveles arriba de este compose) como document root,
+      # para que las rutas absolutas como /A-frame/Proyecto/backend/... resuelvan igual que
+      # en el server.js de desarrollo original (pensado para correr sobre htdocs/A-frame/...).
+      - ../../:/var/www/html
+    ports:
+      - "8090:80"
+
+volumes:
+  db-data:

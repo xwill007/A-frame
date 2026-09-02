@@ -2,11 +2,13 @@
 // Archivo: Proyecto/backend/connDB.php
 // Propósito: centralizar la configuración y la creación de la conexión a la base de datos
 
-// Credenciales y configuración de la base de datos
-$DB_HOST = 'localhost'; // Host de la DB
-$DB_USER = 'root';      // Usuario de la DB
-$DB_PASS = '';          // Contraseña (vacía en XAMPP por defecto)
-$DB_NAME = 'english_vr';// Nombre de la base de datos
+// Credenciales y configuración de la base de datos.
+// Se leen de variables de entorno (ej. definidas por docker-compose) y, si no existen,
+// se usan los valores por defecto de un entorno local tipo XAMPP.
+$DB_HOST = getenv('DB_HOST') ?: 'localhost'; // Host de la DB
+$DB_USER = getenv('DB_USER') ?: 'root';      // Usuario de la DB
+$DB_PASS = getenv('DB_PASS') ?: '';          // Contraseña (vacía en XAMPP por defecto)
+$DB_NAME = getenv('DB_NAME') ?: 'english_vr';// Nombre de la base de datos
 
 // Crear la conexión MySQLi y dejarla disponible en la variable $conn
 $conn = new mysqli($DB_HOST, $DB_USER, $DB_PASS, $DB_NAME);
