@@ -17,4 +17,10 @@
         return;
     }
     AFRAME.components.text.schema.font.default = '/A-frame/english-vr/VR/fonts/Arial-msdf.json';
+
+    // `negate` (por defecto `true` en A-Frame) invierte el signo del campo de distancia al
+    // interpretar la textura MSDF. Ese default está calibrado para la fuente "roboto" incluida;
+    // con la generada por `msdf-bmfont-xml` (convención de signo opuesta) deja cada letra dentro
+    // de un recuadro blanco sólido en vez de mostrarse limpia. `false` es lo correcto aquí.
+    AFRAME.components.text.schema.negate.default = false;
 })();
