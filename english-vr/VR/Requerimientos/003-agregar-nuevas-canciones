@@ -386,6 +386,13 @@ toda la app, no solo `new-song`):** [implementado]
 - Verificado en vivo: el texto "Duración desconocida" en la lista de canciones de `karaoke-vr`
   (que antes se veía como "Duracin desconocida", sin la "ó") ahora se muestra correctamente, sin
   tocar ese código — confirma que el arreglo es efectivamente global.
+- **Ajuste posterior:** con la fuente nueva cada letra aparecía dentro de un recuadro blanco
+  sólido. Causa: `negate` (propiedad del componente `text`, `true` por defecto en A-Frame) invierte
+  el signo con el que se interpreta el campo de distancia MSDF; ese default está calibrado para la
+  fuente "roboto" incluida, y la convención de signo que usa `msdf-bmfont-xml` es la opuesta.
+  `src/fonts.js` también fija `AFRAME.components.text.schema.negate.default = false`. Verificado
+  en vivo comparando el mismo texto con `negate: true` (recuadro blanco) vs `negate: false`
+  (texto limpio) antes de aplicar el default global.
 
 **`Proyecto/backend/modelos/frases/` y `Proyecto/backend/modelos/palabras/` (NUEVO endpoint):**
 
